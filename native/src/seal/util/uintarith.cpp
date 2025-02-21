@@ -300,180 +300,180 @@ namespace seal
         }
 
 
-void divide_uint128_uint64_inplace_generic(uint64_t *numerator, uint64_t denominator, uint64_t *quotient)
-{
-#ifdef SEAL_DEBUG
-    if (!numerator)
-    {
-        throw std::invalid_argument("numerator");
-    }
-    if (denominator == 0)
-    {
-        throw std::invalid_argument("denominator");
-    }
-    if (!quotient)
-    {
-        throw std::invalid_argument("quotient");
-    }
-    if (numerator == quotient)
-    {
-        throw std::invalid_argument("quotient cannot point to the same value as numerator");
-    }
-#endif
-
-#if defined __riscv_v_intrinsic
-    constexpr size_t uint64_count = 2;
-
-    // Initialize quotient to zero
-    quotient[0] = 0;
-    quotient[1] = 0;
-
-    // Load numerator and denominator into vector registers
-    vuint64m1_t num_vec = vle64_v_u64m1(numerator);
-    vuint64m1_t den_vec = vdup_v_u64m1(denominator);
-
-    // Get significant bits
-    int numerator_bits = get_significant_bit_count_uint(numerator, uint64_count);
-    int denominator_bits = get_significant_bit_count(denominator);
-
-    if (numerator_bits < denominator_bits)
-    {
-        return;
-    }
-
-    // Create temporary storage for the shifted denominator
-    uint64_t temp_denominator[uint64_count] = { denominator, 0 };
-    vuint64m1_t shifted_denominator = vle64_v_u64m1(temp_denominator);
-    vuint64m1_t difference = vdup_v_u64m1(0);
-
-    int denominator_shift = numerator_bits - denominator_bits;
-
-    // Left shift denominator to align with numerator
-    shifted_denominator = vsll_vx_u64m1(shifted_denominator, denominator_shift);
-    denominator_bits += denominator_shift;
-
-    // Perform bitwise division algorithm
-    int remaining_shifts = denominator_shift;
-    while (numerator_bits == denominator_bits)
-    {
-        // Subtract numerator - shifted_denominator
-        vuint64m1_t diff_vec = vsub_vv_u64m1(num_vec, shifted_denominator);
+        void divide_uint128_uint64_inplace_generic(uint64_t *numerator, uint64_t denominator, uint64_t *quotient)
+        {
+        #ifdef SEAL_DEBUG
+            if (!numerator)
+            {
+                throw std::invalid_argument("numerator");
+            }
+            if (denominator == 0)
+            {
+                throw std::invalid_argument("denominator");
+            }
+            if (!quotient)
+            {
+                throw std::invalid_argument("quotient");
+            }
+            if (numerator == quotient)
+            {
+                throw std::invalid_argument("quotient cannot point to the same value as numerator");
+            }
+        #endif
         
-        // Check if subtraction resulted in a borrow
-        vbool64_t borrow_mask = vmsltu_vv_u64m1_b64(num_vec, shifted_denominator);
+        #if defined __riscv_v_intrinsic
+            constexpr size_t uint64_count = 2;
 
-        if (vfirst_b64(borrow_mask) != -1) // If borrow occurred
-        {
-            if (remaining_shifts == 0)
+            // Initialize quotient to zero
+            quotient[0] = 0;
+            quotient[1] = 0;
+        
+            // Set vector length for ELEN=64, VLEN=256 (max 4 elements)
+            size_t vl = vsetvlmax_e64m1(); 
+        
+            // Load numerator and denominator into vector registers
+            vuint64m1_t num_vec = vle64_v_u64m1(numerator, vl);
+            vuint64m1_t den_vec = vfmv_v_f_u64m1(denominator, vl); // Broadcast denominator
+        
+            // Get significant bits
+            int numerator_bits = get_significant_bit_count_uint(numerator, uint64_count);
+            int denominator_bits = get_significant_bit_count(denominator);
+        
+            if (numerator_bits < denominator_bits)
             {
-                break;
+                return;
             }
-
-            // Add back the difference to prevent underflow
-            num_vec = vadd_vv_u64m1(diff_vec, num_vec);
-
-            // Shift quotient left
-            uint64_t carry = quotient[0] >> 63;  // Carry bit from quotient[0] to quotient[1]
-            quotient[1] = (quotient[1] << 1) | carry;
-            quotient[0] <<= 1;
-
-            remaining_shifts--;
-        }
-
-        // Update numerator
-        numerator_bits = get_significant_bit_count_uint((uint64_t*)&num_vec, uint64_count);
-
-        // Determine shift amount
-        int numerator_shift = std::min(denominator_bits - numerator_bits, remaining_shifts);
-
-        if (numerator_bits > 0)
-        {
-            num_vec = vsll_vx_u64m1(diff_vec, numerator_shift);
-            numerator_bits += numerator_shift;
-        }
-
-        // Update quotient
-        quotient[0] |= 1;
-        uint64_t carry = quotient[0] >> 63;
-        quotient[1] = (quotient[1] << numerator_shift) | carry;
-        quotient[0] <<= numerator_shift;
-
-        remaining_shifts -= numerator_shift;
-    }
-
-    // Store final remainder (numerator)
-    uint64_t remainder[2];
-    vse64_v_u64m1(remainder, vsrl_vx_u64m1(num_vec, denominator_shift));
-    numerator[0] = remainder[0];
-    numerator[1] = remainder[1];
-
-#else
-    constexpr size_t uint64_count = 2;
-
-    // Clear quotient
-    quotient[0] = 0;
-    quotient[1] = 0;
-
-    // Get significant bits
-    int numerator_bits = get_significant_bit_count_uint(numerator, uint64_count);
-    int denominator_bits = get_significant_bit_count(denominator);
-
-    if (numerator_bits < denominator_bits)
-    {
-        return;
-    }
-
-    // Create storage for shifted denominator
-    uint64_t shifted_denominator[uint64_count]{ denominator, 0 };
-    uint64_t difference[uint64_count]{ 0, 0 };
-
-    // Shift denominator
-    int denominator_shift = numerator_bits - denominator_bits;
-    left_shift_uint128(shifted_denominator, denominator_shift, shifted_denominator);
-    denominator_bits += denominator_shift;
-
-    int remaining_shifts = denominator_shift;
-    while (numerator_bits == denominator_bits)
-    {
-        if (sub_uint(numerator, shifted_denominator, uint64_count, difference))
-        {
-            if (remaining_shifts == 0)
+        
+            // Create temporary storage for the shifted denominator
+            uint64_t temp_denominator[uint64_count] = { denominator, 0 };
+            vuint64m1_t shifted_denominator = vle64_v_u64m1(temp_denominator, vl);
+            vuint64m1_t difference = vmv_v_x_u64m1(0, vl); // Initialize difference to zero
+        
+            int denominator_shift = numerator_bits - denominator_bits;
+        
+            // Left shift denominator to align with numerator
+            shifted_denominator = vsll_vx_u64m1(shifted_denominator, denominator_shift, vl);
+            denominator_bits += denominator_shift;
+        
+            // Perform bitwise division algorithm
+            int remaining_shifts = denominator_shift;
+            while (numerator_bits == denominator_bits)
             {
-                break;
+                // Subtract numerator - shifted_denominator
+                vuint64m1_t diff_vec = vsub_vv_u64m1(num_vec, shifted_denominator, vl);
+                
+                // Check if subtraction resulted in a borrow
+                vbool64_t borrow_mask = vmsltu_vv_u64m1_b64(num_vec, shifted_denominator, vl);
+        
+                if (vfirst_b64(borrow_mask, vl) != -1) // If borrow occurred
+                {
+                    if (remaining_shifts == 0)
+                    {
+                        break;
+                    }
+        
+                    // Add back the difference to prevent underflow
+                    num_vec = vadd_vv_u64m1(diff_vec, num_vec, vl);
+        
+                    // Shift quotient left
+                    uint64_t carry = quotient[0] >> 63;  // Carry bit from quotient[0] to quotient[1]
+                    quotient[1] = (quotient[1] << 1) | carry;
+                    quotient[0] <<= 1;
+        
+                    remaining_shifts--;
+                }
+        
+                // Update numerator
+                numerator_bits = get_significant_bit_count_uint((uint64_t*)&num_vec, uint64_count);
+        
+                // Determine shift amount
+                int numerator_shift = MIN(denominator_bits - numerator_bits, remaining_shifts);
+        
+                if (numerator_bits > 0)
+                {
+                    num_vec = vsll_vx_u64m1(diff_vec, numerator_shift, vl);
+                    numerator_bits += numerator_shift;
+                }
+        
+                // Update quotient
+                quotient[0] |= 1;
+                uint64_t carry = quotient[0] >> 63;
+                quotient[1] = (quotient[1] << numerator_shift) | carry;
+                quotient[0] <<= numerator_shift;
+        
+                remaining_shifts -= numerator_shift;
             }
-
-            add_uint(difference, numerator, uint64_count, difference);
-
-            quotient[1] = (quotient[1] << 1) | (quotient[0] >> (63));
-            quotient[0] <<= 1;
-            remaining_shifts--;
+        
+            // Store final remainder (numerator)
+            vse64_v_u64m1(numerator, vsrl_vx_u64m1(num_vec, denominator_shift, vl), vl)
+        
+        #else
+            constexpr size_t uint64_count = 2;
+        
+            // Clear quotient
+            quotient[0] = 0;
+            quotient[1] = 0;
+        
+            // Get significant bits
+            int numerator_bits = get_significant_bit_count_uint(numerator, uint64_count);
+            int denominator_bits = get_significant_bit_count(denominator);
+        
+            if (numerator_bits < denominator_bits)
+            {
+                return;
+            }
+        
+            // Create storage for shifted denominator
+            uint64_t shifted_denominator[uint64_count]{ denominator, 0 };
+            uint64_t difference[uint64_count]{ 0, 0 };
+        
+            // Shift denominator
+            int denominator_shift = numerator_bits - denominator_bits;
+            left_shift_uint128(shifted_denominator, denominator_shift, shifted_denominator);
+            denominator_bits += denominator_shift;
+        
+            int remaining_shifts = denominator_shift;
+            while (numerator_bits == denominator_bits)
+            {
+                if (sub_uint(numerator, shifted_denominator, uint64_count, difference))
+                {
+                    if (remaining_shifts == 0)
+                    {
+                        break;
+                    }
+        
+                    add_uint(difference, numerator, uint64_count, difference);
+        
+                    quotient[1] = (quotient[1] << 1) | (quotient[0] >> (63));
+                    quotient[0] <<= 1;
+                    remaining_shifts--;
+                }
+        
+                numerator_bits = get_significant_bit_count_uint(difference, uint64_count);
+        
+                int numerator_shift = std::min(denominator_bits - numerator_bits, remaining_shifts);
+        
+                numerator[0] = 0;
+                numerator[1] = 0;
+        
+                if (numerator_bits > 0)
+                {
+                    left_shift_uint128(difference, numerator_shift, numerator);
+                    numerator_bits += numerator_shift;
+                }
+        
+                quotient[0] |= 1;
+        
+                left_shift_uint128(quotient, numerator_shift, quotient);
+                remaining_shifts -= numerator_shift;
+            }
+        
+            if (numerator_bits > 0)
+            {
+                right_shift_uint128(numerator, denominator_shift, numerator);
+            }
+        #endif
         }
-
-        numerator_bits = get_significant_bit_count_uint(difference, uint64_count);
-
-        int numerator_shift = std::min(denominator_bits - numerator_bits, remaining_shifts);
-
-        numerator[0] = 0;
-        numerator[1] = 0;
-
-        if (numerator_bits > 0)
-        {
-            left_shift_uint128(difference, numerator_shift, numerator);
-            numerator_bits += numerator_shift;
-        }
-
-        quotient[0] |= 1;
-
-        left_shift_uint128(quotient, numerator_shift, quotient);
-        remaining_shifts -= numerator_shift;
-    }
-
-    if (numerator_bits > 0)
-    {
-        right_shift_uint128(numerator, denominator_shift, numerator);
-    }
-#endif
-}
 
 
         void divide_uint192_inplace(uint64_t *numerator, uint64_t denominator, uint64_t *quotient)
