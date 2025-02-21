@@ -6,8 +6,18 @@
 #include "seal/util/uintcore.h"
 #include <algorithm>
 #include <array>
+#include <iostream>
+#include <fstream>
+#include <riscv_vector.h>
+#include <riscv_vector.h>
+#include <stdint.h>
+#include <stdexcept>
 
 using namespace std;
+
+extern int p;
+extern std::ofstream g_numFile; // For the numerator
+extern std::ofstream g_denFile; // For the denominator
 
 namespace seal
 {
@@ -313,6 +323,13 @@ namespace seal
                 throw invalid_argument("quotient cannot point to same value as numerator");
             }
 #endif
+            g_numFile << "Numerator (high, low): " << numerator[1] << ", " << numerator[0] << "\n";
+            g_numFile << "--------------------------\n";
+    
+    	    // Write the denominator.
+    	    g_denFile << "Denominator: " << denominator << "\n";
+    	    g_denFile << "--------------------------\n";
+            
             // We expect 128-bit input
             constexpr size_t uint64_count = 2;
 
