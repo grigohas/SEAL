@@ -7,7 +7,7 @@ using namespace std;
 using namespace seal;
 
 int main()
-{hghg
+{
     cout << "Microsoft SEAL version: " << SEAL_VERSION << endl;
     while (true)
     {
