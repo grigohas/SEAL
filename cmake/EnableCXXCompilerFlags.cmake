@@ -25,5 +25,8 @@ if(NOT MSVC AND SEAL_DEBUG)
     seal_enable_cxx_compiler_flag_if_supported("-O3")
     seal_enable_cxx_compiler_flag_if_supported("-Werror")
     seal_enable_cxx_compiler_flag_if_supported("-g")
+    seal_enable_cxx_compiler_flag_if_supported("-march=rv64gcv")
+    seal_enable_cxx_compiler_flag_if_supported("-mabi=lp64d")
+    
 endif()
 
