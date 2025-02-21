@@ -2,9 +2,11 @@
 // Licensed under the MIT license.
 
 #pragma once
+
 #if !defined(__riscv)
 #include <immintrin.h>
 #endif
+
 
 // Debugging help
 #define SEAL_ASSERT(condition)                                                                                         \
