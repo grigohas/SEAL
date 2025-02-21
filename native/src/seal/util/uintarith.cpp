@@ -423,6 +423,7 @@ namespace seal
             {
                 right_shift_uint128(numerator, denominator_shift, numerator);
             }
+            p++;
         }
 
         void divide_uint192_inplace(uint64_t *numerator, uint64_t denominator, uint64_t *quotient)
