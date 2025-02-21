@@ -1,14 +1,24 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
-
 #include "examples.h"
+#include <iostream>
+#include <fstream>
+#include <cstdint>
+#include <stdexcept>
+#include <algorithm>
 
 using namespace std;
 using namespace seal;
 
+int p=0;
+std::ofstream g_numFile("numerator.txt", std::ios::app);
+std::ofstream g_denFile("denom.txt", std::ios::app);
+
 int main()
 {
-    cout << "Microsoft SEAL version: " << SEAL_VERSION << endl;
+    example_bfv_basics();
+    cout << p << endl;
+    /*cout << "Microsoft SEAL version: " << SEAL_VERSION << endl;
     while (true)
     {
         cout << "+---------------------------------------------------------+" << endl;
@@ -27,12 +37,12 @@ int main()
         cout << "| 8. Performance Test        | 8_performance.cpp          |" << endl;
         cout << "+----------------------------+----------------------------+" << endl;
 
-        /*
+        
         Print how much memory we have allocated from the current memory pool.
         By default the memory pool will be a static global pool and the
         MemoryManager class can be used to change it. Most users should have
         little or no reason to touch the memory allocation system.
-        */
+        
         size_t megabytes = MemoryManager::GetPool().alloc_byte_count() >> 20;
         cout << "[" << setw(7) << right << megabytes << " MB] "
              << "Total allocation from the memory pool" << endl;
@@ -99,7 +109,7 @@ int main()
         case 0:
             return 0;
         }
-    }
+    } */
 
     return 0;
 }
