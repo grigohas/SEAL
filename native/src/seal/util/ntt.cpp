@@ -232,7 +232,7 @@ namespace seal
     {
          void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
                     size_t vl = 4; // 4 elements parallel
-                    vuint64m1_t v_den = __riscv_vle64_v_u64m1(den, vl);
+                    vuint64m1_t v_den = __riscv_vmv_v_x_u64m1(den, vl);
                     for(int z=0 ; z<coeff_count_/4 ; z++){
                 
                     // Load numerator parts (high and low)
