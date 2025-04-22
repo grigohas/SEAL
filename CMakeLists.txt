@@ -17,7 +17,7 @@ cmake_minimum_required(VERSION 3.13)
 # the build type here before creating the project to prevent the CMake generator from
 # overriding our default of "Release".
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY
         STRINGS "Release" "Debug" "MinSizeRel" "RelWithDebInfo")
 endif()
@@ -675,7 +675,7 @@ endif()
 
 # [option] SEAL_BUILD_EXAMPLES
 set(SEAL_BUILD_EXAMPLES_OPTION_STR "Build C++ examples for Microsoft SEAL")
-option(SEAL_BUILD_EXAMPLES ${SEAL_BUILD_EXAMPLES_OPTION_STR} OFF)
+option(SEAL_BUILD_EXAMPLES ${SEAL_BUILD_EXAMPLES_OPTION_STR} ON)
 message(STATUS "SEAL_BUILD_EXAMPLES: ${SEAL_BUILD_EXAMPLES}")
 
 if(SEAL_BUILD_EXAMPLES)
