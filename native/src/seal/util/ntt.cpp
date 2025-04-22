@@ -13,6 +13,10 @@
 #include <unordered_map>
 #include "hexl/hexl.hpp"
 #endif
+#ifdef __riscv_vector
+#include <riscv_vector.h>
+#endif
+
 
 using namespace std;
 
@@ -270,6 +274,22 @@ namespace seal
             MultiplyUIntModOperand root;
             root.set(root_, modulus_);
             uint64_t power = root_;
+
+            #if defined(__riscv_v_intrinsic)
+                uint64_t *num = (uint64_t*)malloc(sizeof(uint64_t) * coeff_count_);
+                uint64_t denom=modulus.value();
+                uint64_t *quotriscv = (uint64_t*)malloc(sizeof(uint64_t) * coeff_count_);
+                num[0]=root_;
+            
+                for (size_t i = 1; i < coeff_count_; i++) {
+                    num[i] = multiply_uint_mod(num[i-1], root, modulus_);
+                }
+
+                
+
+
+            
+            #else
             for (size_t i = 1; i < coeff_count_; i++)
             {
                 root_powers_[reverse_bits(i, coeff_count_power_)].set(power, modulus_);
@@ -277,6 +297,10 @@ namespace seal
             }
             root_powers_[0].set(static_cast<uint64_t>(1), modulus_);
 
+            #endif
+
+
+            
             inv_root_powers_ = allocate<MultiplyUIntModOperand>(coeff_count_, pool_);
             root.set(inv_root_, modulus_);
             power = inv_root_;
