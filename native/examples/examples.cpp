@@ -3,13 +3,21 @@
 
 #include "examples.h"
 
+#include<iostream>
+#include <chrono>
+
 using namespace std;
 using namespace seal;
 
 int main()
 {
     cout << "Microsoft SEAL version: " << SEAL_VERSION << endl;
+    auto start = high_resolution_clock::now();
     example_bfv_basics();
+    auto stop = high_resolution_clock::now();
+	auto duration = duration_cast<microseconds>(stop - start);
+    cout <<"Execution time:" <<  duration.count() << "ms" << endl;
+    
     
     /*while (true)
     {
