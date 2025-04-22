@@ -230,6 +230,57 @@ namespace seal
 {
     namespace util
     {
+         void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
+                    size_t vl = 4; // 4 elements parallel
+                    vuint64m1_t v_den = __riscv_vle64_v_u64m1(den, vl);
+                    for(int z=0 ; z<coeff_count_/4 ; z++){
+                
+                    // Load numerator parts (high and low)
+                    vuint64m1_t v_num_hi = __riscv_vle64_v_u64m1(num, vl);      // num[0..3]: high parts
+                    vuint64m1_t v_num_lo = __riscv_vmv_v_x_u64m1(0, vl);  // num[4..7]: low parts
+                
+                    // Broadcast denominator to all lanes
+                    
+                
+                    // Initialize quotient and remainder
+                    vuint64m1_t v_quo = __riscv_vmv_v_x_u64m1(0, vl);
+                    vuint64m1_t v_rem = __riscv_vmv_v_x_u64m1(0, vl);
+                
+                    // 128-bit division loop
+                    for (int j = 0; j < 128; j++) {
+                        v_rem = __riscv_vsll_vx_u64m1(v_rem, 1, vl);
+                
+                        vuint64m1_t next_bit;
+                        if (j < 64) {
+                            next_bit = __riscv_vsrl_vx_u64m1(v_num_hi, 63, vl);
+                            v_num_hi = __riscv_vsll_vx_u64m1(v_num_hi, 1, vl);
+                        } else {
+                            next_bit = __riscv_vsrl_vx_u64m1(v_num_lo, 63, vl);
+                            v_num_lo = __riscv_vsll_vx_u64m1(v_num_lo, 1, vl);
+                        }
+                
+                        v_rem = __riscv_vor_vv_u64m1(v_rem, next_bit, vl);
+                
+                        v_quo = __riscv_vsll_vx_u64m1(v_quo, 1, vl);
+                        vbool64_t mask = __riscv_vmsgeu_vv_u64m1_b64(v_rem, v_den, vl);
+                        v_rem = __riscv_vsub_vv_u64m1_mu(mask, v_rem, v_rem, v_den, vl);
+                        v_quo = __riscv_vor_vx_u64m1_mu(mask, v_quo, v_quo, 1, vl);
+                    }
+                
+                    __riscv_vse64_v_u64m1(quo, v_quo, vl);
+                    if( z != coeff_count_/4){
+                    num+=4;
+                    den+=4;
+                    quo+=4;
+                    }
+                    else {
+                      num+=3;
+                      den+=3;
+                      quo+=3;
+                    }
+                }
+            }
+
         NTTTables::NTTTables(int coeff_count_power, const Modulus &modulus, MemoryPoolHandle pool)
             : pool_(std::move(pool))
         {
@@ -282,25 +333,26 @@ namespace seal
                 num[0]=root_;
             
                 for (size_t i = 1; i < coeff_count_; i++) {
+                    root_powers_[reverse_bits(i, coeff_count_power_)].operand=num[i-1];
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                 }
 
-                
-
-
-            
+                parallel_128bit_div_4(num,denom,quotriscv,coeff_count_);
+                for(size_t i = 1; i < coeff_count_; i++){
+                    root_powers_[reverse_bits(i, coeff_count_power_)].quotient=quotriscv[i-1];
+                }
+            free(num);
+            free(quotriscv);
             #else
             for (size_t i = 1; i < coeff_count_; i++)
             {
                 root_powers_[reverse_bits(i, coeff_count_power_)].set(power, modulus_);
                 power = multiply_uint_mod(power, root, modulus_);
             }
+            #endif
             root_powers_[0].set(static_cast<uint64_t>(1), modulus_);
 
-            #endif
-
-
-            
+           
             inv_root_powers_ = allocate<MultiplyUIntModOperand>(coeff_count_, pool_);
             root.set(inv_root_, modulus_);
             power = inv_root_;
