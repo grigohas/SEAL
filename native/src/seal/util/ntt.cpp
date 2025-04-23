@@ -335,7 +335,7 @@ namespace seal
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                 }
 
-                parallel_128bit_div_4(num,denom,quotriscv,coeff_count_);
+                parallel_128bit_div_4(num.data(),denom,quotriscv.data(),coeff_count_);
                 for(size_t i = 1; i < coeff_count_; i++){
                     size_t rev = reverse_bits(i, coeff_count_power_);
                     root_powers_[rev].operand = num[i - 1];
@@ -368,10 +368,10 @@ namespace seal
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
             }
             
-            parallel_128bit_div_4(num1,denom,quotriscv1,coeff_count_);
+            parallel_128bit_div_4(num1.data(),denom,quotriscv1.data(),coeff_count_);
             
             for(size_t i = 1; i < coeff_count_; i++){
-                rev = reverse_bits(i-1, coeff_count_power_)+1;
+                size_t rev = reverse_bits(i-1, coeff_count_power_)+1;
                 inv_root_powers_[rev].operand = num1[i - 1];
                 inv_root_powers_[rev].quotient = quotriscv1[i - 1];
             }
