@@ -5,6 +5,7 @@
 #include "seal/util/uintarith.h"
 #include "seal/util/uintarithsmallmod.h"
 #include <algorithm>
+#include <vector>
 #ifdef SEAL_USE_INTEL_HEXL
 #include "seal/memorymanager.h"
 #include "seal/util/iterator.h"
@@ -325,23 +326,22 @@ namespace seal
             uint64_t power = root_;
 
             #if defined(__riscv_v_intrinsic)
-                uint64_t *num = (uint64_t*)malloc(sizeof(uint64_t) * coeff_count_);
+                std::vector<uint64_t> num(coeff_count_);
+                std::vector<uint64_t> quotriscv(coeff_count_);
                 uint64_t denom=modulus.value();
-                uint64_t *quotriscv = (uint64_t*)malloc(sizeof(uint64_t) * coeff_count_);
                 num[0]=power;
             
                 for (size_t i = 1; i < coeff_count_; i++) {
-                    root_powers_[reverse_bits(i, coeff_count_power_)].operand=num[i-1];
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                 }
 
                 parallel_128bit_div_4(num,denom,quotriscv,coeff_count_);
                 for(size_t i = 1; i < coeff_count_; i++){
-                    root_powers_[reverse_bits(i, coeff_count_power_)].quotient=quotriscv[i-1];
+                    size_t rev = reverse_bits(i, coeff_count_power_);
+                    root_powers_[rev].operand = num[i - 1];
+                    root_powers_[rev].quotient = quotriscv[i - 1];
                 }
-            free(num);
-            free(quotriscv);
-            
+        
             #else
             for (size_t i = 1; i < coeff_count_; i++)
             {
@@ -358,24 +358,24 @@ namespace seal
             power = inv_root_;
             
             #if defined(__riscv_v_intrinsic)
-                uint64_t *num1 = (uint64_t*)malloc(sizeof(uint64_t) * coeff_count_);
-                uint64_t denom1=power;
-                uint64_t *quotriscv1 = (uint64_t*)malloc(sizeof(uint64_t) * coeff_count_);
-                denom1=modulus.value();
+                std::vector<uint64_t> num1(coeff_count_);
+                std::vector<uint64_t> quotriscv1(coeff_count_);
+                denom=modulus.value();
                 num1[0]=inv_root_;
             
+         
             for (size_t i = 1; i < coeff_count_; i++) {
-                inv_root_powers_[reverse_bits(i - 1, coeff_count_power_) + 1].operand=num1[i-1];
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
             }
             
-            parallel_128bit_div_4(num1,denom1,quotriscv1,coeff_count_);
+            parallel_128bit_div_4(num1,denom,quotriscv1,coeff_count_);
             
             for(size_t i = 1; i < coeff_count_; i++){
-                inv_root_powers_[reverse_bits(i - 1, coeff_count_power_) + 1].quotient=quotriscv1[i-1];
+                rev = reverse_bits(i-1, coeff_count_power_)+1;
+                inv_root_powers_[rev].operand = num1[i - 1];
+                inv_root_powers_[rev].quotient = quotriscv1[i - 1];
             }
-            free(num1);
-            free(quotriscv1);
+
             #else
             
               for (size_t i = 1; i < coeff_count_; i++)
