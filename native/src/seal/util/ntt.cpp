@@ -270,12 +270,10 @@ namespace seal
                     __riscv_vse64_v_u64m1(quo, v_quo, vl);
                     if( z != coeff_count_/4){
                     num+=4;
-                    den+=4;
                     quo+=4;
                     }
                     else {
                       num+=3;
-                      den+=3;
                       quo+=3;
                     }
                 }
