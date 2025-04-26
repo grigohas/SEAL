@@ -269,7 +269,7 @@ namespace seal
                     }
                 
                     __riscv_vse64_v_u64m1(quo, v_quo, vl);
-                    if( z != coeff_count_/vl){
+                    if( z != (coeff_count_/vl)-2){
                     num+=vl;
                     quo+=vl;
                     }
