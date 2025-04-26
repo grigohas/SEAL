@@ -232,10 +232,9 @@ namespace seal
     namespace util
     {
          void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
-                    std::cout << __riscv_vlenb() << std::endl;
-                    size_t vl = 4; // 4 elements parallel
+                    size_t vl = __riscv_vlenb()/8; // 4 elements parallel
                     vuint64m1_t v_den = __riscv_vmv_v_x_u64m1(den, vl);
-                    for(size_t z=0 ; z<coeff_count_/4 ; z++){
+                    for(size_t z=0 ; z<coeff_count_/vl ; z++){
                 
                     // Load numerator parts (high and low)
                     vuint64m1_t v_num_hi = __riscv_vle64_v_u64m1(num, vl);      // num[0..3]: high parts
@@ -270,13 +269,13 @@ namespace seal
                     }
                 
                     __riscv_vse64_v_u64m1(quo, v_quo, vl);
-                    if( z != coeff_count_/4){
-                    num+=4;
-                    quo+=4;
+                    if( z != coeff_count_/vl){
+                    num+=vl;
+                    quo+=vl;
                     }
                     else {
-                      num+=3;
-                      quo+=3;
+                      num+=vl-1;
+                      quo+=vl-1;
                     }
                 }
             }
