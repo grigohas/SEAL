@@ -231,6 +231,7 @@ namespace seal
 {
     namespace util
     {
+    #if defined(__riscv_v_intrinsic)
          void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
                     size_t vl = __riscv_vlenb()/8; // 4 elements parallel
                     vuint64m1_t v_den = __riscv_vmv_v_x_u64m1(den, vl);
@@ -279,6 +280,7 @@ namespace seal
                     }
                 }
             }
+    #endif
 
         NTTTables::NTTTables(int coeff_count_power, const Modulus &modulus, MemoryPoolHandle pool)
             : pool_(std::move(pool))
