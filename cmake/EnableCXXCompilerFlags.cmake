@@ -16,7 +16,7 @@ function(seal_enable_cxx_compiler_flag_if_supported flag)
     endif()
 endfunction()
 
-if(NOT MSVC AND SEAL_DEBUG)
+if(NOT MSVC)
     seal_enable_cxx_compiler_flag_if_supported("-Wall")
     seal_enable_cxx_compiler_flag_if_supported("-Wextra")
     seal_enable_cxx_compiler_flag_if_supported("-Wconversion")
