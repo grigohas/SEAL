@@ -8,6 +8,9 @@
 #include <numeric>
 #include <random>
 #include <tuple>
+#ifdef __riscv_vector
+#include <riscv_vector.h>
+#endif
 
 using namespace std;
 
@@ -106,12 +109,56 @@ namespace seal
                 return;
             }
         }
+        #if defined(__riscv_v_intrinsic)
+          
+          void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count,long long* acc_out) {
+              uint64_t acc_lo = 0;
+              uint64_t acc_hi = 0;
+          
+              size_t i = 0;
+              while (i < count) {
+                  size_t vl = __riscv_vsetvl_e64m1(count - i);
+          
+                  vuint64m1_t vop1 = __riscv_vle64_v_u64m1(op1 + i, vl);
+                  vuint64m1_t vop2 = __riscv_vle64_v_u64m1(op2 + i, vl);
+          
+                  vuint64m1_t vlo = __riscv_vmul_vv_u64m1(vop1, vop2, vl);
+                  vuint64m1_t vhi = __riscv_vmulhu_vv_u64m1(vop1, vop2, vl);
+          
+                  uint64_t lo[vl], hi[vl];
+                  __riscv_vse64_v_u64m1(lo, vlo, vl);
+                  __riscv_vse64_v_u64m1(hi, vhi, vl);
+          
+                  for (size_t j = 0; j < vl; ++j) {
+                      uint64_t prev_lo = acc_lo;
+                      acc_lo += lo[j];
+                      if (acc_lo < prev_lo)
+                          acc_hi += 1;
+                      acc_hi += hi[j];
+                  }
+          
+                  i += vl;
+              }
+          
+              acc_out[0] = acc_lo;
+              acc_out[1] = acc_hi;
+          }
+                    
+            
+            
+        
+        #endif
 
         uint64_t dot_product_mod(
             const uint64_t *operand1, const uint64_t *operand2, size_t count, const Modulus &modulus)
         {
             static_assert(SEAL_MULTIPLY_ACCUMULATE_MOD_MAX >= 16, "SEAL_MULTIPLY_ACCUMULATE_MOD_MAX");
             unsigned long long accumulator[2]{ 0, 0 };
+            #if defined(__riscv_v_intrinsic)
+                
+              vector_mult_accumulate_u64_to_u128(operand1,operand2,count,(long long*)accumulator);
+            
+            #else
             switch (count)
             {
             case 0:
@@ -169,6 +216,7 @@ namespace seal
                 accumulator[0] = dot_product_mod(operand1 + 16, operand2 + 16, count - 16, modulus);
                 goto largest_case;
             };
+            #endif
             return barrett_reduce_128(accumulator, modulus);
         }
     } // namespace util
