@@ -111,7 +111,7 @@ namespace seal
         }
         #if defined(__riscv_v_intrinsic)
           
-void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, uint64_t* acc_out) {
+void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, long long* acc_out) {
     uint64_t acc_lo = 0;
     uint64_t acc_hi = 0;
 
