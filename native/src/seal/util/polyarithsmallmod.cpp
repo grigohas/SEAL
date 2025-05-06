@@ -4,6 +4,9 @@
 #include "seal/util/polyarithsmallmod.h"
 #include "seal/util/uintarith.h"
 #include "seal/util/uintcore.h"
+#ifdef __riscv_vector
+#include <riscv_vector.h>
+#endif
 
 #ifdef SEAL_USE_INTEL_HEXL
 #include "hexl/hexl.hpp"
