@@ -234,7 +234,7 @@ namespace seal
     namespace util
     {
 
-    std::ofstream outFile("everything1.txt");
+
 
     #if defined(__riscv_v_intrinsic)
          void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
@@ -331,8 +331,9 @@ namespace seal
                 std::vector<uint64_t> num(coeff_count_);
                 std::vector<uint64_t> quotriscv(coeff_count_);
                 num[0]=power;
-
+                uint64_t denom=modulus_.value();
             
+
                 for (size_t i = 1; i < coeff_count_; i++) {
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                 }
@@ -366,13 +367,14 @@ namespace seal
                 std::vector<uint64_t> num1(coeff_count_);
                 std::vector<uint64_t> quotriscv1(coeff_count_);
                 num1[0]=inv_root_;
+                denom=modulus_.value();
             
          
             for (size_t i = 1; i < coeff_count_; i++) {
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
             }
             
-            parallel_128bit_div_4(num1.data(),denom1.data(),quotriscv1.data(),coeff_count_);
+            parallel_128bit_div_4(num1.data(),denom,quotriscv1.data(),coeff_count_);
             
             for(size_t i = 1; i < coeff_count_; i++){
                 size_t rev = reverse_bits(i-1, coeff_count_power_)+1;
