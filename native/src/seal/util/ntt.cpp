@@ -243,7 +243,7 @@ namespace seal
 
                     size_t vl = __riscv_vsetvl_e64m4(coeff_count_-i);
                     // Load numerator parts (high and low)
-                    vuint64m4_t v_num_hi = __riscv_vle64_v_u64m4(num, vl); // num[0..3]: high parts
+                    vuint64m4_t v_num_hi = __riscv_vle64_v_u64m4(num+i, vl); // num[0..3]: high parts
             
                     // Initialize quotient and remainder
                     vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
