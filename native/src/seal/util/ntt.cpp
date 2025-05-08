@@ -234,13 +234,14 @@ namespace seal
     #if defined(__riscv_v_intrinsic)
          void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
                 
-                size_t vl = __riscv_vsetvl_e64m4(coeff_count_);  // request VLEN for 64-bit elements, m4 grouping
+                int i=0;  // request VLEN for 64-bit elements, m4 grouping
     
                 vuint64m4_t v_den = __riscv_vmv_v_x_u64m4(den, vl);
                 vuint64m4_t v_num_lo = __riscv_vmv_v_x_u64m4(0, vl);  // num[4..7]: low parts
             
-                for (size_t z = 0; z < coeff_count_ / vl; z++) {
-            
+               while(i<coeff_count_) {
+
+                    size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1)
                     // Load numerator parts (high and low)
                     vuint64m4_t v_num_hi = __riscv_vle64_v_u64m4(num, vl); // num[0..3]: high parts
             
@@ -271,13 +272,7 @@ namespace seal
             
                     __riscv_vse64_v_u64m4(quo, v_quo, vl);
             
-                    if (z != (coeff_count_ / vl) - 2) {
-                        num += vl;
-                        quo += vl;
-                    } else {
-                        num += vl - 1;
-                        quo += vl - 1;
-                    }
+                    i+=vl;
                 }
             }
     #endif
