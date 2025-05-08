@@ -270,7 +270,7 @@ namespace seal
                         v_quo = __riscv_vor_vx_u64m4_mu(mask, v_quo, v_quo, 1, vl);
                     }
             
-                    __riscv_vse64_v_u64m4(quo, v_quo, vl);
+                    __riscv_vse64_v_u64m4(quo+i, v_quo, vl);
             
                     i+=vl;
                 }
