@@ -232,18 +232,17 @@ namespace seal
     namespace util
     {
     #if defined(__riscv_v_intrinsic)
-         void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
+         void parallel_128bit_div_4(uint64_t* num, uint64_t* den, uint64_t* quo, size_t coeff_count_) {
                 
                 int i=0;  // request VLEN for 64-bit elements, m4 grouping
-                size_t vl = __riscv_vsetvl_e64m4(coeff_count_-i);
-                vuint64m4_t v_den = __riscv_vmv_v_x_u64m4(den, vl);
-                vuint64m4_t v_num_lo = __riscv_vmv_v_x_u64m4(0, vl);  // num[4..7]: low parts
-            
+
                while(i<coeff_count_) {
 
                     size_t vl = __riscv_vsetvl_e64m4(coeff_count_-i);
                     // Load numerator parts (high and low)
                     vuint64m4_t v_num_hi = __riscv_vle64_v_u64m4(num+i, vl); // num[0..3]: high parts
+                    vuint64m4_t v_den = __riscv_vle64_v_u64m4(den+i, vl);
+                    vuint64m4_t v_num_lo = __riscv_vmv_v_x_u64m4(0, vl);
             
                     // Initialize quotient and remainder
                     vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
@@ -324,15 +323,18 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
                 std::vector<uint64_t> num(coeff_count_);
+                std::vector<uint64_t> denom(coeff_count_);
                 std::vector<uint64_t> quotriscv(coeff_count_);
-                uint64_t denom=modulus.value();
                 num[0]=power;
+                denom[0]=modulus_.value();
             
                 for (size_t i = 1; i < coeff_count_; i++) {
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
+                    denom[i]=modulus_.value();
                 }
 
-                parallel_128bit_div_4(num.data(),denom,quotriscv.data(),coeff_count_);
+                parallel_128bit_div_4(num.data(),denom.data(),quotriscv.data(),coeff_count_);
+            
                 for(size_t i = 1; i < coeff_count_; i++){
                     size_t rev = reverse_bits(i, coeff_count_power_);
                     root_powers_[rev].operand = num[i - 1];
@@ -356,16 +358,18 @@ namespace seal
             
             #if defined(__riscv_v_intrinsic)
                 std::vector<uint64_t> num1(coeff_count_);
+                std::vector<uint64_t> denom1(coeff_count_);
                 std::vector<uint64_t> quotriscv1(coeff_count_);
-                denom=modulus.value();
+                denom1[0]=modulus_.value();
                 num1[0]=inv_root_;
             
          
             for (size_t i = 1; i < coeff_count_; i++) {
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
+                denom1[i]=modulus_value();
             }
             
-            parallel_128bit_div_4(num1.data(),denom,quotriscv1.data(),coeff_count_);
+            parallel_128bit_div_4(num1.data(),denom1.data(),quotriscv1.data(),coeff_count_);
             
             for(size_t i = 1; i < coeff_count_; i++){
                 size_t rev = reverse_bits(i-1, coeff_count_power_)+1;
