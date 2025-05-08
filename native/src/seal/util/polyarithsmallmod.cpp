@@ -32,9 +32,10 @@ namespace seal
             void barrett_reduce_rvv(const uint64_t *operand1, const uint64_t *operand2, uint64_t *result,
                             uint64_t const_ratio_0, uint64_t const_ratio_1, uint64_t modulus_value, size_t coeff_count) {
                 size_t i = 0;
-                size_t vl = __riscv_vsetvl_e64m4(coeff_count);
+               
             
                 while (i < coeff_count) {
+                    size_t vl = __riscv_vsetvl_e64m4(coeff_count - i);
                     vuint64m4_t op1 = __riscv_vle64_v_u64m4(operand1 + i, vl);
                     vuint64m4_t op2 = __riscv_vle64_v_u64m4(operand2 + i, vl);
             
