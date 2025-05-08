@@ -150,10 +150,6 @@ namespace seal
             acc_out[0] = acc_lo;
             acc_out[1] = acc_hi;
         }
-                                    
-            
-            
-        
         #endif
 
         uint64_t dot_product_mod(
