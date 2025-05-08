@@ -17,6 +17,9 @@
 #ifdef __riscv_vector
 #include <riscv_vector.h>
 #endif
+#include <iostream>
+#include <fstream>
+
 
 
 using namespace std;
@@ -231,6 +234,9 @@ namespace seal
 {
     namespace util
     {
+
+    std::ofstream outFile("everything1.txt");
+
     #if defined(__riscv_v_intrinsic)
          void parallel_128bit_div_4(uint64_t* num, uint64_t* den, uint64_t* quo, size_t coeff_count_) {
                 
@@ -332,6 +338,10 @@ namespace seal
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                     denom[i]=modulus_.value();
                 }
+                for (size_t i = 0; i < coeff_count_; i++) {
+                    outFile << num[i] << "\n";
+                    outFile << denom[i] << "\n";
+                }
 
                 parallel_128bit_div_4(num.data(),denom.data(),quotriscv.data(),coeff_count_);
             
@@ -339,6 +349,9 @@ namespace seal
                     size_t rev = reverse_bits(i, coeff_count_power_);
                     root_powers_[rev].operand = num[i - 1];
                     root_powers_[rev].quotient = quotriscv[i - 1];
+                }
+                for (size_t i = 0; i < coeff_count_; i++) {
+                    quotriscv[i];
                 }
         
             #else
