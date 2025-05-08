@@ -366,7 +366,7 @@ namespace seal
          
             for (size_t i = 1; i < coeff_count_; i++) {
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
-                denom1[i]=modulus_value();
+                denom1[i]=modulus_.value();
             }
             
             parallel_128bit_div_4(num1.data(),denom1.data(),quotriscv1.data(),coeff_count_);
