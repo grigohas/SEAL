@@ -113,9 +113,9 @@ namespace seal
           
         void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, long long* acc_out) {
             uint64_t acc_lo = 0;
-            uint64_t acc_hi = 0;
-        
+            uint64_t acc_hi = 0;           
             size_t i = 0;
+            
             while (i < count) {
                 // Set vector length for m4 (4× register width)
                 size_t vl = __riscv_vsetvl_e64m4(count - i);
