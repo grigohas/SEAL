@@ -12,6 +12,8 @@
 #include "seal/util/uintcore.h"
 #include <stdexcept>
 
+using namespace std;
+
 namespace seal
 {
     namespace util
@@ -23,6 +25,13 @@ namespace seal
         class Arithmetic
         {
         public:
+            #if defined(__riscv_v_intrinsic)
+            void guard_vector_m4(const ValueType *in, const ValueType *out,const std::size_t n) const;
+            void add_vector_u64(const uint64_t* a, const uint64_t* b, const uint64_t* result, size_t n) const;
+            void sub_vector_u64_mod(const uint64_t* a, const uint64_t* b, const uint64_t* result, size_t n) const;
+            void mul_vector_u64_mod(const uint64_t* a, const uint64_t yquot, const uint64_t yop, const uint64_t* result, size_t n) const;
+            #endif
+
             ValueType add(const ValueType &a, const ValueType &b) const;
 
             ValueType sub(const ValueType &a, const ValueType &b) const;
@@ -91,6 +100,132 @@ namespace seal
             @param[roots] powers of a root in bit-reversed order
             @param[scalar] an optional scalar that is multiplied to all output values
             */
+            void transform_to_rev2(
+                ValueType *values, int log_n, const RootType *roots, const ScalarType *scalar = nullptr) const
+            {
+                // constant transform size
+                size_t n = size_t(1) << log_n;
+                // registers to hold temporary values
+                RootType r;
+                ValueType u;
+                ValueType v;
+                // pointers for faster indexing
+                ValueType *x = nullptr;
+                ValueType *y = nullptr;
+                // variables for indexing
+                std::size_t gap = n >> 1;
+                std::size_t m = 1;
+
+                for (; m < (n >> 1); m <<= 1)
+                {
+                    std::vector<uint64_t> xvec(gap);
+                    std::vector<uint64_t> yvec(gap);
+                    std::vector<uint64_t> uvec(gap);
+                    std::vector<uint64_t> vvec(gap);
+
+                    std::size_t offset = 0;
+                    if (gap < 4)
+                    {
+                        for (std::size_t i = 0; i < m; i++)
+                        {
+                            r = *++roots;
+                            x = values + offset;
+                            y = x + gap;
+                            ValueType *tempx = x; 
+                            ValueType *tempy = y; 
+                            
+                            for (size_t z = 0; z < gap; z++)
+                            {
+                                xvec[z] = *tempx;
+                                yvec[z] = *tempy;
+                                ++tempx;
+                                ++tempy;
+                            }
+                            
+                            arithmetic_.guard_vector_m4(xvec.data(), uvec.data(), gap);
+                            arithmetic_.mul_vector_u64_mod(yvec.data(), r.quotient, r.operand, vvec.data(), gap);
+                            arithmetic_.add_vector_u64(uvec.data(), vvec.data(), xvec.data(), gap);
+                            arithmetic_.sub_vector_u64_mod(uvec.data(), vvec.data(), yvec.data(), gap);
+                                
+                             
+                            for (size_t p = 0; p < gap; p++)
+                            {
+                                *x++ = xvec[p];
+                                *y++ = yvec[p];
+                            }
+                            
+                            offset += gap << 1;
+                        }
+                    }
+                    else
+                    {
+                        for (std::size_t i = 0; i < m; i++)
+                        {
+                            r = *++roots;
+                            x = values + offset;
+                            y = x + gap;
+                            ValueType *tempx = x; 
+                            ValueType *tempy = y; 
+                                                       
+                            
+                            for (size_t z = 0; z < gap; z++)
+                            {
+                                xvec[z] = *tempx;
+                                yvec[z] = *tempy;
+                                ++tempx;
+                                ++tempy;
+                            }
+                            
+                            
+                            arithmetic_.guard_vector_m4(xvec.data(), uvec.data(), gap);
+                            arithmetic_.mul_vector_u64_mod(yvec.data(), r.quotient, r.operand, vvec.data(), gap);
+                            arithmetic_.add_vector_u64(uvec.data(), vvec.data(), xvec.data(), gap);
+                            arithmetic_.sub_vector_u64_mod(uvec.data(), vvec.data(), yvec.data(), gap);
+                                
+                             
+                            for (size_t p = 0; p < gap; p++)
+                            {
+                                *x++ = xvec[p];
+                                *y++ = yvec[p];
+                            }
+                             
+                            offset += gap << 1; // offset=offset + (gap*2)   
+                             
+                          }
+                      }
+                    gap >>= 1;
+                }
+
+                if (scalar != nullptr)
+                {
+                    RootType scaled_r;
+                    for (std::size_t i = 0; i < m; i++)
+                    {
+                        r = *++roots;
+                        scaled_r = arithmetic_.mul_root_scalar(r, *scalar);
+                        u = arithmetic_.mul_scalar(arithmetic_.guard(values[0]), *scalar);
+                        v = arithmetic_.mul_root(values[1], scaled_r);
+                        values[0] = arithmetic_.add(u, v);
+                        values[1] = arithmetic_.sub(u, v);
+                        values += 2;
+                    }
+                }
+                else
+                {
+                    for (std::size_t i = 0; i < m; i++)
+                    {
+                        r = *++roots;
+                        u = arithmetic_.guard(values[0]);
+                        v = arithmetic_.mul_root(values[1], r);
+                        values[0] = arithmetic_.add(u, v);
+                        values[1] = arithmetic_.sub(u, v);
+                        values += 2;
+                    }
+                }
+            }
+
+
+
             void transform_to_rev(
                 ValueType *values, int log_n, const RootType *roots, const ScalarType *scalar = nullptr) const
             {
