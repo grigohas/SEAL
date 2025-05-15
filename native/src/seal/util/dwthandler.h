@@ -131,15 +131,13 @@ namespace seal
                             r = *++roots;
                             x = values + offset;
                             y = x + gap;
-                            ValueType *tempx = x; 
-                            ValueType *tempy = y; 
+                            
                             
                             for (size_t z = 0; z < gap; z++)
                             {
-                                xvec[z] = *tempx;
-                                yvec[z] = *tempy;
-                                ++tempx;
-                                ++tempy;
+                                xvec[z] = x[z];
+                                yvec[z] = y[z];
+                                
                             }
                             
                             arithmetic_.guard_vector_m4(xvec.data(), uvec.data(), gap);
@@ -164,16 +162,11 @@ namespace seal
                             r = *++roots;
                             x = values + offset;
                             y = x + gap;
-                            ValueType *tempx = x; 
-                            ValueType *tempy = y; 
-                                                       
-                            
+      
                             for (size_t z = 0; z < gap; z++)
                             {
-                                xvec[z] = *tempx;
-                                yvec[z] = *tempy;
-                                ++tempx;
-                                ++tempy;
+                                xvec[z] = x[z];
+                                yvec[z] = y[z];
                             }
                             
                             
