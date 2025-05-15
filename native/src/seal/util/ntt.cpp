@@ -239,7 +239,7 @@ namespace seal
     #if defined(__riscv_v_intrinsic)
          void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
                 
-                int i=0;  // request VLEN for 64-bit elements, m4 grouping
+                size_t i=0;  // request VLEN for 64-bit elements, m4 grouping
                 size_t vl = __riscv_vsetvl_e64m4(coeff_count_-i);
                 vuint64m4_t v_den = __riscv_vmv_v_x_u64m4(den, vl);
 
