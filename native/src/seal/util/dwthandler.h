@@ -11,6 +11,9 @@
 #include "seal/util/uintarithsmallmod.h"
 #include "seal/util/uintcore.h"
 #include <stdexcept>
+#ifdef __riscv_vector
+#include <riscv_vector.h>
+#endif
 
 using namespace std;
 
@@ -26,10 +29,10 @@ namespace seal
         {
         public:
             #if defined(__riscv_v_intrinsic)
-            void guard_vector_m4(const ValueType *in, const ValueType *out,const std::size_t n) const;
-            void add_vector_u64(const uint64_t* a, const uint64_t* b, const uint64_t* result, size_t n) const;
-            void sub_vector_u64_mod(const uint64_t* a, const uint64_t* b, const uint64_t* result, size_t n) const;
-            void mul_vector_u64_mod(const uint64_t* a, const uint64_t yquot, const uint64_t yop, const uint64_t* result, size_t n) const;
+            vuint64m4_t guard_vector_m4(const vuint64m4_t in, size_t vl) const;
+            vuint64m4_t add_vector_u64(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const;
+            vuint64m4_t sub_vector_u64_mod(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const;
+            vuint64m4_t mul_vector_u64_mod(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, size_t vl) const;
             #endif
 
             ValueType add(const ValueType &a, const ValueType &b) const;
@@ -118,74 +121,42 @@ namespace seal
 
                 for (; m < (n >> 1); m <<= 1)
                 {
-                    std::vector<uint64_t> xvec(gap);
-                    std::vector<uint64_t> yvec(gap);
-                    std::vector<uint64_t> uvec(gap);
-                    std::vector<uint64_t> vvec(gap);
 
                     std::size_t offset = 0;
-                    if (gap < 4)
-                    {
-                        for (std::size_t i = 0; i < m; i++)
-                        {
-                            r = *++roots;
-                            x = values + offset;
-                            y = x + gap;
-                            
-                            
-                            for (size_t z = 0; z < gap; z++)
-                            {
-                                xvec[z] = x[z];
-                                yvec[z] = y[z];
-                                
-                            }
-                            
-                            arithmetic_.guard_vector_m4(xvec.data(), uvec.data(), gap);
-                            arithmetic_.mul_vector_u64_mod(yvec.data(), r.quotient, r.operand, vvec.data(), gap);
-                            arithmetic_.add_vector_u64(uvec.data(), vvec.data(), xvec.data(), gap);
-                            arithmetic_.sub_vector_u64_mod(uvec.data(), vvec.data(), yvec.data(), gap);
-                                
-                             
-                            for (size_t p = 0; p < gap; p++)
-                            {
-                                *x++ = xvec[p];
-                                *y++ = yvec[p];
-                            }
-                            
-                            offset += gap << 1;
+                    
+                    for (size_t i = 0; i < m; i++) {
+                        r = *++roots;
+                        x = values + offset;
+                        y = x + gap;
+                
+                        size_t processed = 0;
+                        while (processed < gap) {
+                            size_t vl = __riscv_vsetvl_e64m4(gap - processed);
+                
+                            vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+                            vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
+                
+                            // Guard vector (reduce vx elements >= 2*modulus)
+                            vuint64m4_t vu = arithmetic_.guard_vector_m4(vx, vl);
+                
+                            // Multiply vy by root quotient modulo root operand
+                            vuint64m4_t vv = arithmetic_.mul_vector_u64_mod(vy, r.quotient, r.operand, vl);
+                
+                            // Add vu + vmul → vx
+                            vuint64m4_t vadd = arithmetic_.add_vector_u64(vu, vv, vl);
+                
+                            // Subtract vu - vmul modulo root operand → vy
+                            vuint64m4_t vsub = arithmetic_.sub_vector_u64_mod(vu, vv, vl);
+                
+                            // Store results
+                            __riscv_vse64_v_u64m4(x + processed, vadd, vl);
+                            __riscv_vse64_v_u64m4(y + processed, vsub, vl);
+                
+                            processed += vl;
                         }
+                
+                        offset += gap << 1;
                     }
-                    else
-                    {
-                        for (std::size_t i = 0; i < m; i++)
-                        {
-                            r = *++roots;
-                            x = values + offset;
-                            y = x + gap;
-      
-                            for (size_t z = 0; z < gap; z++)
-                            {
-                                xvec[z] = x[z];
-                                yvec[z] = y[z];
-                            }
-                            
-                            
-                            arithmetic_.guard_vector_m4(xvec.data(), uvec.data(), gap);
-                            arithmetic_.mul_vector_u64_mod(yvec.data(), r.quotient, r.operand, vvec.data(), gap);
-                            arithmetic_.add_vector_u64(uvec.data(), vvec.data(), xvec.data(), gap);
-                            arithmetic_.sub_vector_u64_mod(uvec.data(), vvec.data(), yvec.data(), gap);
-                                
-                             
-                            for (size_t p = 0; p < gap; p++)
-                            {
-                                *x++ = xvec[p];
-                                *y++ = yvec[p];
-                            }
-                             
-                            offset += gap << 1; // offset=offset + (gap*2)   
-                             
-                          }
-                      }
                     gap >>= 1;
                 }
 
