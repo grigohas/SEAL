@@ -560,8 +560,13 @@ namespace seal
             intel::seal_ext::compute_inverse_ntt(operand, N, p, root, 2, 2);
 #else
             MultiplyUIntModOperand inv_degree_modulo = tables.inv_degree_modulo();
-            tables.ntt_handler().transform_from_rev(
-                operand.ptr(), tables.coeff_count_power(), tables.get_from_inv_root_powers(), &inv_degree_modulo);
+            #if defined(__riscv_v_intrinsic)
+                tables.ntt_handler().transform_from_rev_rvv(
+                    operand.ptr(), tables.coeff_count_power(), tables.get_from_inv_root_powers(), &inv_degree_modulo);
+            #else
+                tables.ntt_handler().transform_from_rev(
+                    operand.ptr(), tables.coeff_count_power(), tables.get_from_inv_root_powers(), &inv_degree_modulo);
+            #endif;
 #endif
         }
 
