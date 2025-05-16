@@ -566,7 +566,7 @@ namespace seal
             #else
                 tables.ntt_handler().transform_from_rev(
                     operand.ptr(), tables.coeff_count_power(), tables.get_from_inv_root_powers(), &inv_degree_modulo);
-            #endif;
+            #endif
 #endif
         }
 
