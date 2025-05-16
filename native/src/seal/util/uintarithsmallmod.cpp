@@ -128,8 +128,12 @@ namespace seal
                 vuint64m4_t vlo = __riscv_vmul_vv_u64m4(vop1, vop2, vl);      // low 64 bits
                 vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vop1, vop2, vl);    // high 64 bits
 
-                uint64_t sum_lo = __riscv_vredsum_vs_u64m4_u64m1(vlo, __riscv_vmv_v_x_u64m1(0, 1), vl);
-                uint64_t sum_hi = __riscv_vredsum_vs_u64m4_u64m1(vhi, __riscv_vmv_v_x_u64m1(0, 1), vl);
+                vuint64m1_t sum_lo_v = __riscv_vredsum_vs_u64m4_u64m1(vlo, __riscv_vmv_v_x_u64m1(0, 1), vl);
+                uint64_t sum_lo = __riscv_vmv_x_s_u64m1_u64(sum_lo_v);  // Extract scalar
+            
+                // Reduce vhi (sum of high 64-bit products)
+                vuint64m1_t sum_hi_v = __riscv_vredsum_vs_u64m4_u64m1(vhi, __riscv_vmv_v_x_u64m1(0, 1), vl);
+                uint64_t sum_hi = __riscv_vmv_x_s_u64m1_u64(sum_hi_v);  // Extract scalar
                           
                 i += vl;
             }
