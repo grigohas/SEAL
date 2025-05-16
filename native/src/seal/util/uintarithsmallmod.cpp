@@ -112,35 +112,36 @@ namespace seal
         #if defined(__riscv_v_intrinsic)
           
         void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, long long* acc_out) {
-            uint64_t sum_lo = 0;
-            uint64_t sum_hi = 0;           
-            size_t i = 0;
+                uint64_t sum_lo = 0;
+                uint64_t sum_hi = 0;           
+                size_t i = 0;
+                
+                while (i < count) {
+                    // Set vector length for current chunk
+                    size_t vl = __riscv_vsetvl_e64m4(count - i);
             
-            while (i < count) {
-                // Set vector length for m4 (4× register width)
-                size_t vl = __riscv_vsetvl_e64m4(count - i);
-        
-                // Load operands into vuint64m4_t vectors
-                vuint64m4_t vop1 = __riscv_vle64_v_u64m4(op1 + i, vl);
-                vuint64m4_t vop2 = __riscv_vle64_v_u64m4(op2 + i, vl);
-        
-                // Multiply (low and high parts)
-                vuint64m4_t vlo = __riscv_vmul_vv_u64m4(vop1, vop2, vl);      // low 64 bits
-                vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vop1, vop2, vl);    // high 64 bits
-
-                vuint64m1_t sum_lo_v = __riscv_vredsum_vs_u64m4_u64m1(vlo, __riscv_vmv_v_x_u64m1(0, 1), vl);
-                sum_lo = __riscv_vmv_x_s_u64m1_u64(sum_lo_v);  // Extract scalar
+                    // Load operands
+                    vuint64m4_t vop1 = __riscv_vle64_v_u64m4(op1 + i, vl);
+                    vuint64m4_t vop2 = __riscv_vle64_v_u64m4(op2 + i, vl);
             
-                // Reduce vhi (sum of high 64-bit products)
-                vuint64m1_t sum_hi_v = __riscv_vredsum_vs_u64m4_u64m1(vhi, __riscv_vmv_v_x_u64m1(0, 1), vl);
-                sum_hi = __riscv_vmv_x_s_u64m1_u64(sum_hi_v);  // Extract scalar
-                          
-                i += vl;
+                    // Multiply (low and high parts)
+                    vuint64m4_t vlo = __riscv_vmul_vv_u64m4(vop1, vop2, vl);      // low 64 bits
+                    vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vop1, vop2, vl);    // high 64 bits
+            
+                    // Reduce and extract low part
+                    vuint64m1_t sum_lo_v = __riscv_vredsum_vs_u64m4_u64m1(vlo, __riscv_vmv_v_x_u64m1(0, 1), vl);
+                    sum_lo += __riscv_vmv_x_s_u64m1_u64(sum_lo_v);
+            
+                    // Reduce and extract high part
+                    vuint64m1_t sum_hi_v = __riscv_vredsum_vs_u64m4_u64m1(vhi, __riscv_vmv_v_x_u64m1(0, 1), vl);
+                    sum_hi += __riscv_vmv_x_s_u64m1_u64(sum_hi_v);
+            
+                    i += vl;
+                }
+            
+                acc_out[0] = static_cast<long long>(sum_lo); // Low part
+                acc_out[1] = static_cast<long long>(sum_hi); // High part
             }
-        
-            acc_out[0] = static_cast<long long>(sum_lo);
-            acc_out[1] = static_cast<long long>(sum_hi);
-        }
         #endif
 
         uint64_t dot_product_mod(
