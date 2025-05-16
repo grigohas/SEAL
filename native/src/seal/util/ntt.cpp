@@ -509,7 +509,7 @@ namespace seal
 
             intel::seal_ext::compute_forward_ntt(operand, N, p, root, 4, 4);
 #else
-            tables.ntt_handler().transform_to_rev(
+            tables.ntt_handler().transform_to_rev_rvv(
                 operand.ptr(), tables.coeff_count_power(), tables.get_from_root_powers());
 #endif
         }
