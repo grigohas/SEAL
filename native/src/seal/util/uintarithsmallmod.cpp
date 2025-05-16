@@ -127,28 +127,15 @@ namespace seal
                 // Multiply (low and high parts)
                 vuint64m4_t vlo = __riscv_vmul_vv_u64m4(vop1, vop2, vl);      // low 64 bits
                 vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vop1, vop2, vl);    // high 64 bits
-        
-                // Store results to memory for scalar accumulation
-                uint64_t lo[vl];
-                uint64_t hi[vl];
-                __riscv_vse64_v_u64m4(lo, vlo, vl);
-                __riscv_vse64_v_u64m4(hi, vhi, vl);
-        
-                // Accumulate in scalar 128-bit
-                for (size_t j = 0; j < vl; ++j) {
-                    uint64_t prev_lo = acc_lo;
-                    acc_lo += lo[j];
-                    if (acc_lo < prev_lo) {
-                        acc_hi++;
-                    }
-                    acc_hi += hi[j];
-                }
-        
+
+                uint64_t sum_lo = __riscv_vredsum_vs_u64m4_u64m1(vlo, __riscv_vmv_v_x_u64m1(0, 1), vl);
+                uint64_t sum_hi = __riscv_vredsum_vs_u64m4_u64m1(vhi, __riscv_vmv_v_x_u64m1(0, 1), vl);
+                          
                 i += vl;
             }
         
-            acc_out[0] = acc_lo;
-            acc_out[1] = acc_hi;
+            acc_out[0] = static_cast<long long>(sum_lo);
+            acc_out[1] = static_cast<long long>(sum_hi);
         }
         #endif
 
