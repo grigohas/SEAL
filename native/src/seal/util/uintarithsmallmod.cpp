@@ -112,8 +112,8 @@ namespace seal
         #if defined(__riscv_v_intrinsic)
           
         void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, long long* acc_out) {
-            uint64_t acc_lo = 0;
-            uint64_t acc_hi = 0;           
+            uint64_t sum_lo = 0;
+            uint64_t sum_hi = 0;           
             size_t i = 0;
             
             while (i < count) {
@@ -129,11 +129,11 @@ namespace seal
                 vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vop1, vop2, vl);    // high 64 bits
 
                 vuint64m1_t sum_lo_v = __riscv_vredsum_vs_u64m4_u64m1(vlo, __riscv_vmv_v_x_u64m1(0, 1), vl);
-                uint64_t sum_lo = __riscv_vmv_x_s_u64m1_u64(sum_lo_v);  // Extract scalar
+                sum_lo = __riscv_vmv_x_s_u64m1_u64(sum_lo_v);  // Extract scalar
             
                 // Reduce vhi (sum of high 64-bit products)
                 vuint64m1_t sum_hi_v = __riscv_vredsum_vs_u64m4_u64m1(vhi, __riscv_vmv_v_x_u64m1(0, 1), vl);
-                uint64_t sum_hi = __riscv_vmv_x_s_u64m1_u64(sum_hi_v);  // Extract scalar
+                sum_hi = __riscv_vmv_x_s_u64m1_u64(sum_hi_v);  // Extract scalar
                           
                 i += vl;
             }
