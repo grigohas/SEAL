@@ -62,6 +62,7 @@ namespace seal
             
                 return __riscv_vmerge_vvm_u64m4(reduced, corrected, overflow, vl);
             }
+
       #endif
 
         void modulo_poly_coeffs(ConstCoeffIter poly, std::size_t coeff_count, const Modulus &modulus, CoeffIter result)
