@@ -294,9 +294,30 @@ namespace seal
 #else
 
             #if defined(__riscv_v_intrinsic)
-                
-
-            
+                while (processed < gap) {
+                    size_t vl = __riscv_vsetvl_e64m4(gap - processed);
+                    
+                    vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+                    vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
+                    
+                                // Guard vector (reduce vx elements >= 2*modulus)
+                    vuint64m4_t vu = arithmetic_.guard_vector_m4(vx, vl);
+                    
+                                // Multiply vy by root quotient modulo root operand
+                    vuint64m4_t vv = arithmetic_.mul_vector_u64_mod(vy, r.quotient, r.operand, vl);
+                    
+                                // Add vu + vmul → vx
+                    vuint64m4_t vadd = arithmetic_.add_vector_u64(vu, vv, vl);
+                    
+                                // Subtract vu - vmul modulo root operand → vy
+                    vuint64m4_t vsub = arithmetic_.sub_vector_u64_mod(vu, vv, vl);
+                    
+                                // Store results
+                    __riscv_vse64_v_u64m4(x + processed, vadd, vl);
+                    __riscv_vse64_v_u64m4(y + processed, vsub, vl);
+                    
+                    processed += vl;
+                }
 
             #else
             SEAL_ITERATE(iter(poly, result), coeff_count, [&](auto I) {
