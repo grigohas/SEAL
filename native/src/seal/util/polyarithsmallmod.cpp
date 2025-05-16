@@ -63,7 +63,7 @@ namespace seal
                 return __riscv_vmerge_vvm_u64m4(reduced, corrected, overflow, vl);
             }
 
-             inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl) const {
+             inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl)  {
                   const uint64_t p = modulus.value();  // Assuming modulus_ is in scope
               
                   // Replicate scalars across vector registers
