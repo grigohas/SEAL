@@ -146,8 +146,8 @@ namespace seal
           
                 i += vl;
             }
-            acc_out[0] = static_cast<long long>(sum_lo);
-            acc_out[1] = static_cast<long long>(sum_hi);
+            acc_out[0] = acc_lo;
+            acc_out[1] = acc_hi;
         }
         #endif
 
