@@ -67,17 +67,17 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
             
-              inline vuint64m4_t guard_vector_m4(const vuint64m4_t in, size_t vl) const {
+              inline vuint64m4_t guard_vector_rvv(const vuint64m4_t in, size_t vl) const {
                   vuint64m4_t modulus_vec = __riscv_vmv_v_x_u64m4(two_times_modulus_, vl);
                   vbool16_t mask = __riscv_vmsgeu_vx_u64m4_b16(in, two_times_modulus_, vl);
                   return __riscv_vsub_vv_u64m4_mu(mask, in, in, modulus_vec, vl);
               }
               
-              inline vuint64m4_t add_vector_u64(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const {
+              inline vuint64m4_t add_vector_rvv(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const {
                   return __riscv_vadd_vv_u64m4(a, b, vl);
               }
               
-              inline vuint64m4_t sub_vector_u64_mod(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const {
+              inline vuint64m4_t sub_vector_rvv(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const {
                   // Broadcast vector with all elements = two_times_modulus_
                   vuint64m4_t modulus_vec = __riscv_vmv_v_x_u64m4(two_times_modulus_, vl);
               
@@ -88,7 +88,7 @@ namespace seal
                   return result;
               }
               
-              inline vuint64m4_t mul_vector_u64_mod(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, size_t vl) const {
+              inline vuint64m4_t mul_vector_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, size_t vl) const {
                   const uint64_t p = modulus_.value();  // Assuming modulus_ is in scope
               
                   // Replicate scalars across vector registers
