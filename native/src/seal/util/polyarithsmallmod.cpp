@@ -63,6 +63,32 @@ namespace seal
                 return __riscv_vmerge_vvm_u64m4(reduced, corrected, overflow, vl);
             }
 
+             inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl) const {
+                  const uint64_t p = modulus.value();  // Assuming modulus_ is in scope
+              
+                  // Replicate scalars across vector registers
+                  vuint64m4_t vb = __riscv_vmv_v_x_u64m4(yquot, vl);
+                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(p, vl);
+                  vuint64m4_t vop = __riscv_vmv_v_x_u64m4(yop, vl);
+              
+                  // Unsigned high part of a * yquot
+                  vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(a, vb, vl);
+              
+                  // a * yop
+                  vuint64m4_t vmul1 = __riscv_vmul_vv_u64m4(a, vop, vl);
+              
+                  // vhi * p
+                  vuint64m4_t vmul2 = __riscv_vmul_vv_u64m4(vhi, vp, vl);
+              
+                  // (a * yop) - (vhi * p)
+                  vuint64m4_t vres = __riscv_vsub_vv_u64m4(vmul1, vmul2, vl);
+
+                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, p, vl);
+                  vuint64m4_t vcorrected = __riscv_vsub_vv_u64m4(vres, vp, vl);
+
+                  return __riscv_vmerge_vvm_u64m4(vres, vcorrected, ge_mask, vl);
+              }
+
       #endif
 
         void modulo_poly_coeffs(ConstCoeffIter poly, std::size_t coeff_count, const Modulus &modulus, CoeffIter result)
