@@ -177,14 +177,33 @@ namespace seal
                 }
                 else
                 {
-                    for (std::size_t i = 0; i < m; i++)
-                    {
-                        r = *++roots;
-                        u = arithmetic_.guard(values[0]);
-                        v = arithmetic_.mul_root(values[1], r);
-                        values[0] = arithmetic_.add(u, v);
-                        values[1] = arithmetic_.sub(u, v);
-                        values += 2;
+                    size_t processed = 0;
+                    while (processed < m) {
+                        size_t vl = __riscv_vsetvl_e64m4(m - processed);
+                    
+                        // Load roots vector
+                        vuint64m4_t vr = __riscv_vle64_v_u64m4(roots + 1 + processed, vl);
+                    
+                        // Load values vector (even indices)
+                        vuint64m4_t vvalues0 = __riscv_vle64_v_u64m4(values + 2*processed, vl);
+                        // Load values vector (odd indices)
+                        vuint64m4_t vvalues1 = __riscv_vle64_v_u64m4(values + 2*processed + 1, vl);
+                    
+                        // Apply guard: assuming guard_vector_rvv accepts vector and vl
+                        vuint64m4_t vu = arithmetic_.guard_vector_rvv(vvalues0, vl);
+                    
+                        // Multiply vvalues1 by roots vector
+                        vuint64m4_t vv = arithmetic_.mul_vector_rvv(vvalues1, vr.quotient, vr.operand, vl);
+                    
+                        // Compute add and sub
+                        vuint64m4_t vadd = arithmetic_.add_vector_rvv(vu, vv, vl);
+                        vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vu, vv, vl);
+                    
+                        // Store results
+                        __riscv_vse64_v_u64m4(values + 2*processed, vadd, vl);
+                        __riscv_vse64_v_u64m4(values + 2*processed + 1, vsub, vl);
+                    
+                        processed += vl;
                     }
                 }
             }
