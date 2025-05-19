@@ -67,38 +67,49 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
             
-            inline vuint64m8_t guard_vector_rvv(const vuint64m8_t in, size_t vl) const {
-                vuint64m8_t modulus_vec = __riscv_vmv_v_x_u64m8(two_times_modulus_, vl);
-                vbool8_t mask = __riscv_vmsgeu_vx_u64m8_b8(in, two_times_modulus_, vl);
-                return __riscv_vsub_vv_u64m8_mu(mask, in, in, modulus_vec, vl);
-            }
-            
-            inline vuint64m8_t add_vector_rvv(const vuint64m8_t a, const vuint64m8_t b, size_t vl) const {
-                return __riscv_vadd_vv_u64m8(a, b, vl);
-            }
-            
-            inline vuint64m8_t sub_vector_rvv(const vuint64m8_t a, const vuint64m8_t b, size_t vl) const {
-                vuint64m8_t modulus_vec = __riscv_vmv_v_x_u64m8(two_times_modulus_, vl);
-                vuint64m8_t tmp = __riscv_vadd_vv_u64m8(a, modulus_vec, vl);
-                vuint64m8_t result = __riscv_vsub_vv_u64m8(tmp, b, vl);
-                return result;
-            }
-            
-            inline vuint64m8_t mul_vector_rvv(const vuint64m8_t a, const uint64_t yquot, const uint64_t yop, size_t vl) const {
-                const uint64_t p = modulus_.value();
-            
-                vuint64m8_t vb = __riscv_vmv_v_x_u64m8(yquot, vl);
-                vuint64m8_t vp = __riscv_vmv_v_x_u64m8(p, vl);
-                vuint64m8_t vop = __riscv_vmv_v_x_u64m8(yop, vl);
-            
-                vuint64m8_t vhi = __riscv_vmulhu_vv_u64m8(a, vb, vl);
-                vuint64m8_t vmul1 = __riscv_vmul_vv_u64m8(a, vop, vl);
-                vuint64m8_t vmul2 = __riscv_vmul_vv_u64m8(vhi, vp, vl);
-            
-                vuint64m8_t vres = __riscv_vsub_vv_u64m8(vmul1, vmul2, vl);
-            
-                return vres;
-            }
+             inline vuint64m4_t guard_vector_rvv(const vuint64m4_t in, size_t vl) const {
+                  vuint64m4_t modulus_vec = __riscv_vmv_v_x_u64m4(two_times_modulus_, vl);
+                  vbool16_t mask = __riscv_vmsgeu_vx_u64m4_b16(in, two_times_modulus_, vl);
+                  return __riscv_vsub_vv_u64m4_mu(mask, in, in, modulus_vec, vl);
+              }
+              
+              inline vuint64m4_t add_vector_rvv(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const {
+                  return __riscv_vadd_vv_u64m4(a, b, vl);
+              }
+              
+              inline vuint64m4_t sub_vector_rvv(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const {
+                  // Broadcast vector with all elements = two_times_modulus_
+                  vuint64m4_t modulus_vec = __riscv_vmv_v_x_u64m4(two_times_modulus_, vl);
+              
+                  // result = a + (2 * modulus) - b
+                  vuint64m4_t tmp = __riscv_vadd_vv_u64m4(a, modulus_vec, vl);
+                  vuint64m4_t result = __riscv_vsub_vv_u64m4(tmp, b, vl);
+              
+                  return result;
+              }
+              
+              inline vuint64m4_t mul_vector_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, size_t vl) const {
+                  const uint64_t p = modulus_.value();  // Assuming modulus_ is in scope
+              
+                  // Replicate scalars across vector registers
+                  vuint64m4_t vb = __riscv_vmv_v_x_u64m4(yquot, vl);
+                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(p, vl);
+                  vuint64m4_t vop = __riscv_vmv_v_x_u64m4(yop, vl);
+              
+                  // Unsigned high part of a * yquot
+                  vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(a, vb, vl);
+              
+                  // a * yop
+                  vuint64m4_t vmul1 = __riscv_vmul_vv_u64m4(a, vop, vl);
+              
+                  // vhi * p
+                  vuint64m4_t vmul2 = __riscv_vmul_vv_u64m4(vhi, vp, vl);
+              
+                  // (a * yop) - (vhi * p)
+                  vuint64m4_t vres = __riscv_vsub_vv_u64m4(vmul1, vmul2, vl);
+              
+                  return vres;
+              }
               #endif
 
         private:
