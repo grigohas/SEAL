@@ -161,7 +161,7 @@ namespace seal
                         }
                         gap >>= 1;
                     }
-                if (scalar != nullptr)
+                 if (scalar != nullptr)
                 {
                     RootType scaled_r;
                     for (std::size_t i = 0; i < m; i++)
@@ -242,47 +242,48 @@ namespace seal
                         gap <<= 1;
                     }
 
-                if (scalar != nullptr)
-                {
-                    r = *++roots;
-                    RootType scaled_r = arithmetic_.mul_root_scalar(r, *scalar);
-                    x = values;
-                    y = x + gap;
-                
-                    // Broadcast root components to vectors
-                    size_t total = gap;
-                    size_t processed = 0;
-                    while (processed < total)
+                    if (scalar != nullptr)
                     {
-                        size_t vl = __riscv_vsetvl_e64m4(total - processed);
-                
-                        vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
-                        vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
-                
-                        // u + v
-                        vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
-                        vadd = arithmetic_.guard_vector_rvv(vadd, vl);
-                
-                        // Multiply by scalar
-                        vuint64m4_t vmul_x = arithmetic_.mul_scalar_vector_rvv(vadd, *scalar, vl);
-                
-                        // u - v
-                        vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
-                
-                        // Broadcast scaled_r components
-                        vuint64m4_t scaled_quot_vec = __riscv_vfmv_v_f_u64m4(scaled_r.quotient, vl);
-                        vuint64m4_t scaled_op_vec = __riscv_vfmv_v_f_u64m4(scaled_r.operand, vl);
-                
-                        // Multiply by scaled root
-                        vuint64m4_t vmul_y = arithmetic_.mul_vector_rvv(vsub, scaled_quot_vec, scaled_op_vec, vl);
-                
-                        // Store back
-                        __riscv_vse64_v_u64m4(x + processed, vmul_x, vl);
-                        __riscv_vse64_v_u64m4(y + processed, vmul_y, vl);
-                
-                        processed += vl;
+                        r = *++roots;
+                        RootType scaled_r = arithmetic_.mul_root_scalar(r, *scalar);
+                        x = values;
+                        y = x + gap;
+                        if (gap < 4)
+                        {
+                            for (std::size_t j = 0; j < gap; j++)
+                            {
+                                u = arithmetic_.guard(*x);
+                                v = *y;
+                                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+                            }
+                        }
+                        else
+                        {
+                            for (std::size_t j = 0; j < gap; j += 4)
+                            {
+                                u = arithmetic_.guard(*x);
+                                v = *y;
+                                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+    
+                                u = arithmetic_.guard(*x);
+                                v = *y;
+                                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+    
+                                u = arithmetic_.guard(*x);
+                                v = *y;
+                                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+    
+                                u = arithmetic_.guard(*x);
+                                v = *y;
+                                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+                            }
+                        }
                     }
-                }
                 else
                 {
                         r = *++roots;
