@@ -133,27 +133,27 @@ namespace seal
                     
                             size_t processed = 0;
                             while (processed < gap) {
-                                size_t vl = __riscv_vsetvl_e64m8(gap - processed);
-
-                                vuint64m4_t vx = __riscv_vle64_v_u64m8(x + processed, vl);
-                                vuint64m4_t vy = __riscv_vle64_v_u64m8(y + processed, vl);
-                                
+                                size_t vl = __riscv_vsetvl_e64m4(gap - processed);
+                    
+                                vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+                                vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
+                    
                                 // Guard vector (reduce vx elements >= 2*modulus)
                                 vuint64m4_t vu = arithmetic_.guard_vector_rvv(vx, vl);
-                                
+                    
                                 // Multiply vy by root quotient modulo root operand
                                 vuint64m4_t vv = arithmetic_.mul_vector_rvv(vy, r.quotient, r.operand, vl);
-                                
+                    
                                 // Add vu + vmul → vx
                                 vuint64m4_t vadd = arithmetic_.add_vector_rvv(vu, vv, vl);
-                                
+                    
                                 // Subtract vu - vmul modulo root operand → vy
                                 vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vu, vv, vl);
-                                
+                    
                                 // Store results
-                                __riscv_vse64_v_u64m8(x + processed, vadd, vl);
-                                __riscv_vse64_v_u64m8(y + processed, vsub, vl);
-                                
+                                __riscv_vse64_v_u64m4(x + processed, vadd, vl);
+                                __riscv_vse64_v_u64m4(y + processed, vsub, vl);
+                    
                                 processed += vl;
                             }
                     
@@ -216,24 +216,24 @@ namespace seal
                             std::size_t processed = 0;
                             while (processed < gap)
                             {
-                                size_t vl = __riscv_vsetvl_e64m8(gap - processed);
-
+                                size_t vl = __riscv_vsetvl_e64m4(gap - processed);
+                
                                 // Load vectors
-                                vuint64m4_t vx = __riscv_vle64_v_u64m8(x + processed, vl);
-                                vuint64m4_t vy = __riscv_vle64_v_u64m8(y + processed, vl);
-                                
+                                vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+                                vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
+                
                                 // u = x + y
                                 vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
                                 vadd = arithmetic_.guard_vector_rvv(vadd, vl);
-                                
+                
                                 // v = (x - y) * r
                                 vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
                                 vuint64m4_t vmul = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
-                                
+                
                                 // Store results
-                                __riscv_vse64_v_u64m8(x + processed, vadd, vl);
-                                __riscv_vse64_v_u64m8(y + processed, vmul, vl);
-                                
+                                __riscv_vse64_v_u64m4(x + processed, vadd, vl);
+                                __riscv_vse64_v_u64m4(y + processed, vmul, vl);
+                
                                 processed += vl;
                             }
                             offset += gap << 1;
