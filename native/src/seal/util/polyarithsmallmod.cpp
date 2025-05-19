@@ -20,7 +20,7 @@ namespace seal
     {
         #if defined(__riscv_v_intrinsic)
         
-            inline vuint64m8_t barrett_reduce_rvv(vuint64m4_t op1,vuint64m4_t op2,uint64_t const_ratio_0,uint64_t const_ratio_1,uint64_t modulus_value,size_t vl)
+            inline vuint64m8_t barrett_reduce_rvv(vuint64m8_t op1,vuint64m8_t op2,uint64_t const_ratio_0,uint64_t const_ratio_1,uint64_t modulus_value,size_t vl)
             {
                    // Step 1: Multiply op1 and op2
                 vuint64m8_t z_low  = __riscv_vmul_vv_u64m8(op1, op2, vl);
@@ -68,8 +68,6 @@ namespace seal
             }
 
              inline vuint64m8_t  multiply_uint_mod_rvv(const vuint64m8_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl)  {
-                  const uint64_t p = modulus.value();  // Assuming modulus_ is in scope
-              
                   // Replicate scalars across vector registers
                     const uint64_t p = modulus.value();
 
