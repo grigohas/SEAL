@@ -308,12 +308,8 @@ namespace seal
                             // u - v
                             vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
                     
-                            // Broadcast root components
-                            vuint64m4_t root_quot_vec = __riscv_vfmv_v_f_u64m4(r.quotient, vl);
-                            vuint64m4_t root_op_vec = __riscv_vfmv_v_f_u64m4(r.operand, vl);
-                    
                             // Multiply by root
-                            vuint64m4_t vmul_y = arithmetic_.mul_vector_rvv(vsub, root_quot_vec, root_op_vec, vl);
+                            vuint64m4_t vmul_y = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
                     
                             // Store back
                             __riscv_vse64_v_u64m4(x + processed, vguard_add, vl);
