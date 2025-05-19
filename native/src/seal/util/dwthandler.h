@@ -320,7 +320,8 @@ namespace seal
                     
                             processed += vl;
                         }
-            }
+                    }
+                }
             #endif
 
             void transform_to_rev(
