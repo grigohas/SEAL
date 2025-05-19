@@ -294,10 +294,8 @@ namespace seal
 #else
 
             #if defined(__riscv_v_intrinsic)
-                size_t processed = 0;
-                while (processed < coeff_count) {
-                    size_t processed=0;
-                    while (processed < coeff_count) {
+                 size_t processed=0;
+                 while (processed < coeff_count) {
                     size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
                     
                     vuint64m4_t vx = __riscv_vle64_v_u64m4(poly + processed, vl);
