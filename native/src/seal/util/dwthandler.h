@@ -29,10 +29,10 @@ namespace seal
         {
         public:
             #if defined(__riscv_v_intrinsic)
-            vuint64m8_t guard_vector_rvv(const vuint64m8_t in, size_t vl) const;
-            vuint64m8_t add_vector_rvv(const vuint64m8_t a, const vuint64m8_t b, size_t vl) const;
-            vuint64m8_t sub_vector_rvv(const vuint64m8_t a, const vuint64m8_t b, size_t vl) const;
-            vuint64m8_t mul_vector_rvv(const vuint64m8_t a, const uint64_t yquot, const uint64_t yop, size_t vl) const;
+            vuint64m4_t guard_vector_rvv(const vuint64m4_t in, size_t vl) const;
+            vuint64m4_t add_vector_rvv(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const;
+            vuint64m4_t sub_vector_rvv(const vuint64m4_t a, const vuint64m4_t b, size_t vl) const;
+            vuint64m4_t mul_vector_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, size_t vl) const;
             #endif
 
             ValueType add(const ValueType &a, const ValueType &b) const;
@@ -135,20 +135,20 @@ namespace seal
                             while (processed < gap) {
                                 size_t vl = __riscv_vsetvl_e64m8(gap - processed);
 
-                                vuint64m8_t vx = __riscv_vle64_v_u64m8(x + processed, vl);
-                                vuint64m8_t vy = __riscv_vle64_v_u64m8(y + processed, vl);
+                                vuint64m4_t vx = __riscv_vle64_v_u64m8(x + processed, vl);
+                                vuint64m4_t vy = __riscv_vle64_v_u64m8(y + processed, vl);
                                 
                                 // Guard vector (reduce vx elements >= 2*modulus)
-                                vuint64m8_t vu = arithmetic_.guard_vector_rvv(vx, vl);
+                                vuint64m4_t vu = arithmetic_.guard_vector_rvv(vx, vl);
                                 
                                 // Multiply vy by root quotient modulo root operand
-                                vuint64m8_t vv = arithmetic_.mul_vector_rvv(vy, r.quotient, r.operand, vl);
+                                vuint64m4_t vv = arithmetic_.mul_vector_rvv(vy, r.quotient, r.operand, vl);
                                 
                                 // Add vu + vmul → vx
-                                vuint64m8_t vadd = arithmetic_.add_vector_rvv(vu, vv, vl);
+                                vuint64m4_t vadd = arithmetic_.add_vector_rvv(vu, vv, vl);
                                 
                                 // Subtract vu - vmul modulo root operand → vy
-                                vuint64m8_t vsub = arithmetic_.sub_vector_rvv(vu, vv, vl);
+                                vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vu, vv, vl);
                                 
                                 // Store results
                                 __riscv_vse64_v_u64m8(x + processed, vadd, vl);
@@ -219,16 +219,16 @@ namespace seal
                                 size_t vl = __riscv_vsetvl_e64m8(gap - processed);
 
                                 // Load vectors
-                                vuint64m8_t vx = __riscv_vle64_v_u64m8(x + processed, vl);
-                                vuint64m8_t vy = __riscv_vle64_v_u64m8(y + processed, vl);
+                                vuint64m4_t vx = __riscv_vle64_v_u64m8(x + processed, vl);
+                                vuint64m4_t vy = __riscv_vle64_v_u64m8(y + processed, vl);
                                 
                                 // u = x + y
-                                vuint64m8_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
+                                vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
                                 vadd = arithmetic_.guard_vector_rvv(vadd, vl);
                                 
                                 // v = (x - y) * r
-                                vuint64m8_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
-                                vuint64m8_t vmul = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
+                                vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
+                                vuint64m4_t vmul = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
                                 
                                 // Store results
                                 __riscv_vse64_v_u64m8(x + processed, vadd, vl);
