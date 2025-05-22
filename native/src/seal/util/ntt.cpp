@@ -267,7 +267,7 @@ namespace seal
         
             return v_quo;
         }*/
-        vuint64m4_t parallel_128bit_div_4_rvv(vuint64m4_t num_hi, vuint64m4_t num_lo, vuint64m4_t den, size_t vl) {
+       /* vuint64m4_t parallel_128bit_div_4_rvv(vuint64m4_t num_hi, vuint64m4_t num_lo, vuint64m4_t den, size_t vl) {
             vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
             vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
             
@@ -291,6 +291,61 @@ namespace seal
                     v_rem = __riscv_vsub_vv_u64m4_mu(mask, v_rem, v_rem, den, vl);
                     v_quo = __riscv_vor_vx_u64m4_mu(mask, v_quo, v_quo, 1, vl);
                 }
+            }
+            
+            return v_quo;
+        }*/
+        vuint64m4_t parallel_128bit_div_4_rvv(vuint64m4_t num_hi, vuint64m4_t num_lo, vuint64m4_t den, size_t vl) {
+            vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
+            vuint64m4_t v_rem_hi = __riscv_vmv_v_x_u64m4(0, vl);
+            vuint64m4_t v_rem_lo = num_hi; // Start with upper 64 bits
+            
+            // First 64-bit chunk
+            {
+                // Estimate quotient for v_rem_hi:v_rem_lo / den
+                // Using 64-bit division of v_rem_hi:v_rem_lo[63:0]
+                vuint64m4_t q_estimate = __riscv_vdivu_vv_u64m4(v_rem_lo, den, vl);
+                
+                // Multiply denominator by estimate
+                vuint64m4_t prod_lo = __riscv_vmul_vv_u64m4(den, q_estimate, vl);
+                vuint64m4_t prod_hi = __riscv_vmulhu_vv_u64m4(den, q_estimate, vl);
+                
+                // Subtract from remainder
+                vbool16_t borrow;
+                v_rem_lo = __riscv_vssub_vv_u64m4(v_rem_lo, prod_lo, vl, &borrow);
+                v_rem_hi = __riscv_vssub_vx_u64m4(v_rem_hi, prod_hi, vl);
+                v_rem_hi = __riscv_vssub_vx_u64m4_mu(borrow, v_rem_hi, v_rem_hi, 1, vl);
+                
+                // Adjust if estimate was too large
+                vbool16_t needs_adjust = __riscv_vmsltu_vv_u64m4_b16(v_rem_hi, den, vl);
+                q_estimate = __riscv_vsub_vx_u64m4_mu(needs_adjust, q_estimate, q_estimate, 1, vl);
+                v_rem_hi = __riscv_vadd_vv_u64m4_mu(needs_adjust, v_rem_hi, v_rem_hi, den, vl);
+                
+                v_quo = __riscv_vor_vv_u64m4(v_quo, q_estimate, vl);
+            }
+            
+            // Second 64-bit chunk
+            {
+                // Shift remainder left by 64 and incorporate lower bits
+                v_rem_hi = v_rem_lo;
+                v_rem_lo = num_lo;
+                
+                // Repeat the division process
+                vuint64m4_t q_estimate = __riscv_vdivu_vv_u64m4(v_rem_lo, den, vl);
+                
+                vuint64m4_t prod_lo = __riscv_vmul_vv_u64m4(den, q_estimate, vl);
+                vuint64m4_t prod_hi = __riscv_vmulhu_vv_u64m4(den, q_estimate, vl);
+                
+                vbool16_t borrow;
+                v_rem_lo = __riscv_vssub_vv_u64m4(v_rem_lo, prod_lo, vl, &borrow);
+                v_rem_hi = __riscv_vssub_vx_u64m4(v_rem_hi, prod_hi, vl);
+                v_rem_hi = __riscv_vssub_vx_u64m4_mu(borrow, v_rem_hi, v_rem_hi, 1, vl);
+                
+                vbool16_t needs_adjust = __riscv_vmsltu_vv_u64m4_b16(v_rem_hi, den, vl);
+                q_estimate = __riscv_vsub_vx_u64m4_mu(needs_adjust, q_estimate, q_estimate, 1, vl);
+                v_rem_hi = __riscv_vadd_vv_u64m4_mu(needs_adjust, v_rem_hi, v_rem_hi, den, vl);
+                
+                v_quo = __riscv_vor_vv_u64m4(__riscv_vsll_vx_u64m4(v_quo, 64, vl), q_estimate, vl);
             }
             
             return v_quo;
