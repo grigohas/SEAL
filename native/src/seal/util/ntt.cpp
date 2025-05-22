@@ -243,15 +243,12 @@ namespace seal
 
 
     #if defined(__riscv_v_intrinsic)
-         void parallel_128bit_div_4_rvv(vuint64m4_t num_hi,vuint64m4_t num_lo,vuint64m4_t den,vuint64m4_t& quo,size_t vl) {
+         vuint64m4_t parallel_128bit_div_4_rvv(vuint64m4_t num_hi, vuint64m4_t num_lo, vuint64m4_t den, size_t vl) {
             vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
             vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
         
             for (int j = 0; j < 128; j++) {
-                // Shift remainder left by 1
                 v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
-        
-                // Get next bit from num_hi or num_lo
                 vuint64m4_t next_bit;
                 if (j < 64) {
                     next_bit = __riscv_vsrl_vx_u64m4(num_hi, 63, vl);
@@ -260,24 +257,15 @@ namespace seal
                     next_bit = __riscv_vsrl_vx_u64m4(num_lo, 63, vl);
                     num_lo = __riscv_vsll_vx_u64m4(num_lo, 1, vl);
                 }
-        
-                // Append next bit to remainder
                 v_rem = __riscv_vor_vv_u64m4(v_rem, next_bit, vl);
-        
-                // Shift quotient left by 1
                 v_quo = __riscv_vsll_vx_u64m4(v_quo, 1, vl);
         
-                // Compare remainder >= denominator
                 vbool16_t mask = __riscv_vmsgeu_vv_u64m4_b16(v_rem, den, vl);
-        
-                // Conditionally subtract denominator from remainder
                 v_rem = __riscv_vsub_vv_u64m4_mu(mask, v_rem, v_rem, den, vl);
-        
-                // Conditionally OR 1 into quotient
                 v_quo = __riscv_vor_vx_u64m4_mu(mask, v_quo, v_quo, 1, vl);
             }
         
-            quo = v_quo;  // Return result via reference
+            return v_quo;
         }
     #endif
 
@@ -345,9 +333,8 @@ namespace seal
                     vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
                     vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
                 
-                    vuint64m4_t quo_vec;
-                    parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, quo_vec, vl);
-                
+
+                    vuint64m4_t quo_vec = parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, vl);
                     __riscv_vse64_v_u64m4(quotriscv.data() + processed, quo_vec, vl);
                     processed += vl;
                 }
@@ -395,10 +382,10 @@ namespace seal
                 vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
                 vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
                 
-                vuint64m4_t quo_vec;
-                parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, quo_vec, vl);
-                
+            
+                 vuint64m4_t quo_vec = parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, vl);
                  __riscv_vse64_v_u64m4(quotriscv1.data() + processed, quo_vec, vl);
+               
                 processed += vl;
             }
             
