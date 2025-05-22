@@ -243,7 +243,7 @@ namespace seal
 
 
     #if defined(__riscv_v_intrinsic)
-         void parallel_128bit_div_4_rvv(vuint64m4_t num_hi,vuint64m4_t num_lo,vuint64m4_t den,vuint64m4_t quo,size_t vl) {
+         void parallel_128bit_div_4_rvv(vuint64m4_t num_hi,vuint64m4_t num_lo,vuint64m4_t den,vuint64m4_t& quo,size_t vl) {
             vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
             vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
         
