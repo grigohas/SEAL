@@ -15,7 +15,7 @@
 using namespace std;
 using namespace std::chrono;
 
-extern int f;
+extern auto f;
 
 namespace seal
 {
