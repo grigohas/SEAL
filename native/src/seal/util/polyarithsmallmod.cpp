@@ -11,6 +11,9 @@
 #ifdef SEAL_USE_INTEL_HEXL
 #include "hexl/hexl.hpp"
 #endif
+using namespace std::chrono;
+
+extern int q;
 
 using namespace std;
 
@@ -345,6 +348,7 @@ namespace seal
             const uint64_t modulus_value = modulus.value();
             const uint64_t const_ratio_0 = modulus.const_ratio()[0];
             const uint64_t const_ratio_1 = modulus.const_ratio()[1];
+            auto start = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)  
                 size_t processed = 0;
               while (processed < coeff_count) {
@@ -385,6 +389,9 @@ namespace seal
                 get<2>(I) = SEAL_COND_SELECT(tmp3 >= modulus_value, tmp3 - modulus_value, tmp3);
             });
             #endif
+            auto stop = high_resolution_clock::now();
+   	         auto duration = duration_cast<microseconds>(stop - start);
+            q+=duration.count();
 #endif
         }
 
