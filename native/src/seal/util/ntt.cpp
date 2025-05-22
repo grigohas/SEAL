@@ -24,10 +24,10 @@
 using namespace std;
 using namespace std::chrono;
 
-extern auto p;
-extern auto o;
-extern auto t;
-int64_t total_duration_microsec = 0;
+extern long int p;
+extern long int o;
+extern long int t;
+long int total_duration_microsec = 0;
 
 #ifdef SEAL_USE_INTEL_HEXL
 namespace intel
