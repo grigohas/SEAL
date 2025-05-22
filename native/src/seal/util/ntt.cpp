@@ -399,7 +399,7 @@ namespace seal
                 vuint64m4_t quo_vec;
                 parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, quo_vec, vl);
             
-                __riscv_vse64_v_u64m4(quo + processed, quo_vec, vl);
+                __riscv_vse64_v_u64m4(quotriscv1 + processed, quo_vec, vl);
                 processed += vl;
             }
             
