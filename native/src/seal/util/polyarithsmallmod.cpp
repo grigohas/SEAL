@@ -13,7 +13,7 @@
 #endif
 using namespace std::chrono;
 
-extern auto q;
+extern long int q;
 
 using namespace std;
 
