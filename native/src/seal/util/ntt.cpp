@@ -24,9 +24,9 @@
 using namespace std;
 using namespace std::chrono;
 
-extern int p;
-extern int o;
-extern int t;
+extern auto p;
+extern auto o;
+extern auto t;
 int64_t total_duration_microsec = 0;
 
 #ifdef SEAL_USE_INTEL_HEXL
