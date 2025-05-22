@@ -303,25 +303,24 @@ namespace seal
             // First 64-bit chunk
             {
                 // Estimate quotient for v_rem_hi:v_rem_lo / den
-                // Using 64-bit division of v_rem_hi:v_rem_lo[63:0]
                 vuint64m4_t q_estimate = __riscv_vdivu_vv_u64m4(v_rem_lo, den, vl);
                 
                 // Multiply denominator by estimate
                 vuint64m4_t prod_lo = __riscv_vmul_vv_u64m4(den, q_estimate, vl);
                 vuint64m4_t prod_hi = __riscv_vmulhu_vv_u64m4(den, q_estimate, vl);
                 
-                // Subtract from remainder
-                vbool16_t borrow;
-                v_rem_lo = __riscv_vssub_vv_u64m4(v_rem_lo, prod_lo, vl, &borrow);
-                v_rem_hi = __riscv_vssub_vx_u64m4(v_rem_hi, prod_hi, vl);
-                v_rem_hi = __riscv_vssub_vx_u64m4_mu(borrow, v_rem_hi, v_rem_hi, 1, vl);
+                // Subtract from remainder with borrow handling
+                vbool16_t borrow = __riscv_vmsltu_vv_u64m4_b16(v_rem_lo, prod_lo, vl);
+                v_rem_lo = __riscv_vsub_vv_u64m4(v_rem_lo, prod_lo, vl);
+                v_rem_hi = __riscv_vsub_vv_u64m4(v_rem_hi, prod_hi, vl);
+                v_rem_hi = __riscv_vsub_vx_u64m4_mu(borrow, v_rem_hi, v_rem_hi, 1, vl);
                 
                 // Adjust if estimate was too large
                 vbool16_t needs_adjust = __riscv_vmsltu_vv_u64m4_b16(v_rem_hi, den, vl);
                 q_estimate = __riscv_vsub_vx_u64m4_mu(needs_adjust, q_estimate, q_estimate, 1, vl);
                 v_rem_hi = __riscv_vadd_vv_u64m4_mu(needs_adjust, v_rem_hi, v_rem_hi, den, vl);
                 
-                v_quo = __riscv_vor_vv_u64m4(v_quo, q_estimate, vl);
+                v_quo = q_estimate;
             }
             
             // Second 64-bit chunk
@@ -336,10 +335,11 @@ namespace seal
                 vuint64m4_t prod_lo = __riscv_vmul_vv_u64m4(den, q_estimate, vl);
                 vuint64m4_t prod_hi = __riscv_vmulhu_vv_u64m4(den, q_estimate, vl);
                 
-                vbool16_t borrow;
-                v_rem_lo = __riscv_vssub_vv_u64m4(v_rem_lo, prod_lo, vl, &borrow);
-                v_rem_hi = __riscv_vssub_vx_u64m4(v_rem_hi, prod_hi, vl);
-                v_rem_hi = __riscv_vssub_vx_u64m4_mu(borrow, v_rem_hi, v_rem_hi, 1, vl);
+                // Subtract with borrow handling
+                vbool16_t borrow = __riscv_vmsltu_vv_u64m4_b16(v_rem_lo, prod_lo, vl);
+                v_rem_lo = __riscv_vsub_vv_u64m4(v_rem_lo, prod_lo, vl);
+                v_rem_hi = __riscv_vsub_vv_u64m4(v_rem_hi, prod_hi, vl);
+                v_rem_hi = __riscv_vsub_vx_u64m4_mu(borrow, v_rem_hi, v_rem_hi, 1, vl);
                 
                 vbool16_t needs_adjust = __riscv_vmsltu_vv_u64m4_b16(v_rem_hi, den, vl);
                 q_estimate = __riscv_vsub_vx_u64m4_mu(needs_adjust, q_estimate, q_estimate, 1, vl);
