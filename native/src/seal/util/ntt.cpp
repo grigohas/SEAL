@@ -243,48 +243,42 @@ namespace seal
 
 
     #if defined(__riscv_v_intrinsic)
-         void parallel_128bit_div_4(uint64_t* num, uint64_t den, uint64_t* quo, size_t coeff_count_) {
-                size_t i=0;  // request VLEN for 64-bit elements, m4 grouping
-                size_t vl = __riscv_vsetvl_e64m4(coeff_count_-i);
-                vuint64m4_t v_den = __riscv_vmv_v_x_u64m4(den, vl);
-
-               while(i<coeff_count_) {
-
-                    vl = __riscv_vsetvl_e64m4(coeff_count_-i);
-                    // Load numerator parts (high and low)
-                    vuint64m4_t v_num_hi = __riscv_vle64_v_u64m4(num+i, vl); // num[0..3]: high parts
-                    vuint64m4_t v_num_lo = __riscv_vmv_v_x_u64m4(0, vl);
-            
-                    // Initialize quotient and remainder
-                    vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
-                    vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
-            
-                    // 128-bit division loop
-                    for (int j = 0; j < 128; j++) {
-                        v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
-            
-                        vuint64m4_t next_bit;
-                        if (j < 64) {
-                            next_bit = __riscv_vsrl_vx_u64m4(v_num_hi, 63, vl);
-                            v_num_hi = __riscv_vsll_vx_u64m4(v_num_hi, 1, vl);
-                        } else {
-                            next_bit = __riscv_vsrl_vx_u64m4(v_num_lo, 63, vl);
-                            v_num_lo = __riscv_vsll_vx_u64m4(v_num_lo, 1, vl);
-                        }
-            
-                        v_rem = __riscv_vor_vv_u64m4(v_rem, next_bit, vl);
-            
-                        v_quo = __riscv_vsll_vx_u64m4(v_quo, 1, vl);
-                        vbool16_t mask = __riscv_vmsgeu_vv_u64m4_b16(v_rem, v_den, vl);
-                        v_rem = __riscv_vsub_vv_u64m4_mu(mask, v_rem, v_rem, v_den, vl);
-                        v_quo = __riscv_vor_vx_u64m4_mu(mask, v_quo, v_quo, 1, vl);
-                    }
-            
-                    __riscv_vse64_v_u64m4(quo+i, v_quo, vl);
-            
-                    i+=vl;
+         void parallel_128bit_div_4_rvv(vuint64m4_t num_hi,vuint64m4_t num_lo,vuint64m4_t den,vuint64m4_t& quo,size_t vl) {
+            vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
+            vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
+        
+            for (int j = 0; j < 128; j++) {
+                // Shift remainder left by 1
+                v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
+        
+                // Get next bit from num_hi or num_lo
+                vuint64m4_t next_bit;
+                if (j < 64) {
+                    next_bit = __riscv_vsrl_vx_u64m4(num_hi, 63, vl);
+                    num_hi = __riscv_vsll_vx_u64m4(num_hi, 1, vl);
+                } else {
+                    next_bit = __riscv_vsrl_vx_u64m4(num_lo, 63, vl);
+                    num_lo = __riscv_vsll_vx_u64m4(num_lo, 1, vl);
                 }
+        
+                // Append next bit to remainder
+                v_rem = __riscv_vor_vv_u64m4(v_rem, next_bit, vl);
+        
+                // Shift quotient left by 1
+                v_quo = __riscv_vsll_vx_u64m4(v_quo, 1, vl);
+        
+                // Compare remainder >= denominator
+                vbool16_t mask = __riscv_vmsgeu_vv_u64m4_b16(v_rem, den, vl);
+        
+                // Conditionally subtract denominator from remainder
+                v_rem = __riscv_vsub_vv_u64m4_mu(mask, v_rem, v_rem, den, vl);
+        
+                // Conditionally OR 1 into quotient
+                v_quo = __riscv_vor_vx_u64m4_mu(mask, v_quo, v_quo, 1, vl);
             }
+        
+            quo = v_quo;  // Return result via reference
+        }
     #endif
 
         NTTTables::NTTTables(int coeff_count_power, const Modulus &modulus, MemoryPoolHandle pool)
@@ -377,13 +371,25 @@ namespace seal
                 std::vector<uint64_t> quotriscv1(coeff_count_);
                 num1[0]=inv_root_;
                 denom=modulus_.value();
-            
-         
+
             for (size_t i = 1; i < coeff_count_; i++) {
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
             }
+
+            size_t processed=0;
+            while (processed < coeff_count_) {
+                size_t vl = __riscv_vsetvl_e64m4(coeff_count_ - processed);
             
-            parallel_128bit_div_4(num1.data(),denom,quotriscv1.data(),coeff_count_);
+                vuint64m4_t num_hi = __riscv_vle64_v_u64m4(num + processed, vl);
+                vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64-bits are zero
+                vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
+            
+                vuint64m4_t quo_vec;
+                parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, quo_vec, vl);
+            
+                __riscv_vse64_v_u64m4(quo + processed, quo_vec, vl);
+                processed += vl;
+            }
             
             for(size_t i = 1; i < coeff_count_; i++){
                 size_t rev = reverse_bits(i-1, coeff_count_power_)+1;
