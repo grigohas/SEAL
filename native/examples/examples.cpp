@@ -10,11 +10,11 @@ using namespace std;
 using namespace seal;
 using namespace std::chrono;
 
-int p=0;
-int q=0;
-int f=0;
-int o=0;
-int t=0;
+auto p=0;
+auto q=0;
+auto f=0;
+auto o=0;
+auto t=0;
 
 
 int main()
