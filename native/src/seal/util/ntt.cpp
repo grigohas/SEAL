@@ -27,7 +27,7 @@ using namespace std::chrono;
 extern long int p;
 extern long int o;
 extern long int t;
-long int total_duration_microsec = 0;
+
 
 #ifdef SEAL_USE_INTEL_HEXL
 namespace intel
@@ -364,7 +364,8 @@ namespace seal
             #endif
             root_powers_[0].set(static_cast<uint64_t>(1), modulus_);
             auto stop1 = high_resolution_clock::now();
-            total_duration_microsec += duration_cast<microseconds>(stop1 - start1).count();
+            auto duration1 = duration_cast<microseconds>(stop1 - start1);
+            p+=duration1.count();
            
             inv_root_powers_ = allocate<MultiplyUIntModOperand>(coeff_count_, pool_);
             root.set(inv_root_, modulus_);
@@ -401,8 +402,8 @@ namespace seal
             inv_root_powers_[0].set(static_cast<uint64_t>(1), modulus_);
             
             stop1 = high_resolution_clock::now();
-            total_duration_microsec += duration_cast<microseconds>(stop1 - start1).count();
-            p+=total_duration_microsec;
+            duration1 = duration_cast<microseconds>(stop1 - start1);
+            p+=duration1.count();
 
 
 
