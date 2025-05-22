@@ -22,6 +22,12 @@
 
 
 using namespace std;
+using namespace std::chrono;
+
+extern int p;
+extern int o;
+extern int t;
+int64_t total_duration_microsec = 0;
 
 #ifdef SEAL_USE_INTEL_HEXL
 namespace intel
@@ -325,6 +331,7 @@ namespace seal
             MultiplyUIntModOperand root;
             root.set(root_, modulus_);
             uint64_t power = root_;
+            auto start = high_resolution_clock::now();
 
             #if defined(__riscv_v_intrinsic)
                 std::vector<uint64_t> num(coeff_count_);
@@ -356,11 +363,13 @@ namespace seal
             
             #endif
             root_powers_[0].set(static_cast<uint64_t>(1), modulus_);
-
+            auto stop = high_resolution_clock::now();
+            total_duration_microsec += duration_cast<microseconds>(stop - start).count();
            
             inv_root_powers_ = allocate<MultiplyUIntModOperand>(coeff_count_, pool_);
             root.set(inv_root_, modulus_);
             power = inv_root_;
+            start = high_resolution_clock::now();
             
             #if defined(__riscv_v_intrinsic)
                 std::vector<uint64_t> num1(coeff_count_);
@@ -391,7 +400,9 @@ namespace seal
             #endif  
             inv_root_powers_[0].set(static_cast<uint64_t>(1), modulus_);
             
-
+            stop = high_resolution_clock::now();
+            total_duration_microsec += duration_cast<microseconds>(stop - start).count();
+            p+=total_duration_microsec;
 
 
 
@@ -508,7 +519,7 @@ namespace seal
 
             intel::seal_ext::compute_forward_ntt(operand, N, p, root, 4, 4);
 #else
-
+            auto start5 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)
                 tables.ntt_handler().transform_to_rev_rvv(
                     operand.ptr(), tables.coeff_count_power(), tables.get_from_root_powers());
@@ -516,6 +527,9 @@ namespace seal
                 tables.ntt_handler().transform_to_rev(
                     operand.ptr(), tables.coeff_count_power(), tables.get_from_root_powers());
             #endif
+            auto stop5 = high_resolution_clock::now();
+   	        auto duration5 = duration_cast<microseconds>(stop5 - start5);
+            o+=duration5.count();
 #endif
         }
 
@@ -559,6 +573,7 @@ namespace seal
             intel::seal_ext::compute_inverse_ntt(operand, N, p, root, 2, 2);
 #else
             MultiplyUIntModOperand inv_degree_modulo = tables.inv_degree_modulo();
+            auto start6 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)
                 tables.ntt_handler().transform_from_rev_rvv(
                     operand.ptr(), tables.coeff_count_power(), tables.get_from_inv_root_powers(), &inv_degree_modulo);
@@ -566,6 +581,9 @@ namespace seal
                 tables.ntt_handler().transform_from_rev(
                     operand.ptr(), tables.coeff_count_power(), tables.get_from_inv_root_powers(), &inv_degree_modulo);
             #endif
+            auto stop6 = high_resolution_clock::now();
+   	        auto duration6 = duration_cast<microseconds>(stop6 - start6);
+            t+=duration6.count();
 #endif
         }
 
