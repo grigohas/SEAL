@@ -10,16 +10,27 @@ using namespace std;
 using namespace seal;
 using namespace std::chrono;
 
+int p=0;
+int q=0;
+int f=0;
+int o=0;
+int t=0;
+
+
 int main()
 {
     cout << "Microsoft SEAL version: " << SEAL_VERSION << endl;
     auto start = high_resolution_clock::now();
     example_bfv_basics();
     auto stop = high_resolution_clock::now();
-	auto duration = duration_cast<microseconds>(stop - start);
+   	auto duration = duration_cast<microseconds>(stop - start);
     cout <<"Execution time:" <<  duration.count() << "ms" << endl;
-    
-    
+    cout <<"Divide:" <<  p << "ms" << endl;
+    cout <<"Dyadic:" <<  q << "ms" << endl;
+    cout <<"Dot:" <<  f << "ms" << endl;
+    cout <<"To rev:" <<  o << "ms" << endl;
+    cout <<"From rev:" <<  t << "ms" << endl;
+  
     /*while (true)
     {
         cout << "+---------------------------------------------------------+" << endl;
