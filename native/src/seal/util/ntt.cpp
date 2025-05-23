@@ -326,13 +326,13 @@ namespace seal
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                 }
                 size_t processed=0;
+                size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
+                vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
+                vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
                 while (processed < coeff_count_-1) {
-                    size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
+                    vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
                 
                     vuint64m4_t num_hi = __riscv_vle64_v_u64m4(num.data() + processed, vl);
-                    vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
-                    vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
-                
 
                     vuint64m4_t quo_vec = parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, vl);
                     __riscv_vse64_v_u64m4(quotriscv.data() + processed, quo_vec, vl);
@@ -375,15 +375,15 @@ namespace seal
             }
 
            processed=0;
+           size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
+           vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
+           vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
            while (processed < coeff_count_-1) {
                 size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
                 
                 vuint64m4_t num_hi = __riscv_vle64_v_u64m4(num1.data() + processed, vl);
-                vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
-                vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
                 
-            
-                 vuint64m4_t quo_vec = parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, vl);
+                vuint64m4_t quo_vec = parallel_128bit_div_4_rvv(num_hi, num_lo, den_vec, vl);
                  __riscv_vse64_v_u64m4(quotriscv1.data() + processed, quo_vec, vl);
                
                 processed += vl;
