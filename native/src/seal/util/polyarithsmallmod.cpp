@@ -23,7 +23,7 @@ namespace seal
     {
         #if defined(__riscv_v_intrinsic)
         
-             inline vuint64m4_t barrett_reduce_rvv(vuint64m4_t op1,vuint64m4_t op2,uint64_t const_ratio_0,uint64_t const_ratio_1,uint64_t modulus_value,size_t vl)
+             inline vuint64m4_t barrett_reduce_rvv(vuint64m4_t op1,vuint64m4_t op2,vuint64m4_t const_ratio_0,vuint64m4_t const_ratio_1,vuint64m4_t modulus_value,size_t vl)
             {
                                    // Step 1: Multiply op1 and op2
                     vuint64m4_t z_low  = __riscv_vmul_vv_u64m4(op1, op2, vl);
