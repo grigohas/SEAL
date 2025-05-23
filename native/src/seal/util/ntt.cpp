@@ -375,11 +375,11 @@ namespace seal
             }
 
            processed=0;
-           size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
-           vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
-           vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
+           vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
+           num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
+           den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
            while (processed < coeff_count_-1) {
-                size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
+                vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
                 
                 vuint64m4_t num_hi = __riscv_vle64_v_u64m4(num1.data() + processed, vl);
                 
