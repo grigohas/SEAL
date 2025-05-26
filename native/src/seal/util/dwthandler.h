@@ -204,6 +204,7 @@ namespace seal
                 
                      for (; m > 1; m >>= 1)
                     {
+                        std::size_t offset = 0;
                         for (std::size_t i = 0; i < m; i++)
                         {
                             r = *++roots;
@@ -213,6 +214,7 @@ namespace seal
                             std::size_t processed = 0;
                             while (processed < gap)
                             {
+                                size_t vl = __riscv_vsetvl_e64m4(gap - processed);
                                 vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
                                 vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
                                 vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
