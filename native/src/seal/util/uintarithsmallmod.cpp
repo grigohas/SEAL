@@ -159,7 +159,7 @@ namespace seal
         {
             static_assert(SEAL_MULTIPLY_ACCUMULATE_MOD_MAX >= 16, "SEAL_MULTIPLY_ACCUMULATE_MOD_MAX");
             unsigned long long accumulator[2]{ 0, 0 };
-            auto start5 = high_resolution_clock::now();
+            //auto start5 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic) 
               vector_mult_accumulate_u64_to_u128(operand1,operand2,count,(long long*)accumulator);
             #else
@@ -221,9 +221,9 @@ namespace seal
                 goto largest_case;
             };
             #endif
-            auto stop5 = high_resolution_clock::now();
-   	          auto duration5 = duration_cast<microseconds>(stop5 - start5);
-              f+=duration5.count();
+           // auto stop5 = high_resolution_clock::now();
+   	         // auto duration5 = duration_cast<microseconds>(stop5 - start5);
+            //  f+=duration5.count();
             return barrett_reduce_128(accumulator, modulus);
         }
     } // namespace util
