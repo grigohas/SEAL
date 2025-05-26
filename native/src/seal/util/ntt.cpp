@@ -246,25 +246,33 @@ namespace seal
         vuint64m4_t parallel_128bit_div_4_rvv(vuint64m4_t num_hi, vuint64m4_t num_lo, vuint64m4_t den, size_t vl) {
             vuint64m4_t v_quo = __riscv_vmv_v_x_u64m4(0, vl);
             vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
-        
-            for (int j = 0; j < 128; j++) {
+            
+            // Process upper 64 bits from num_hi
+            for (int j = 0; j < 64; j++) {
                 v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
-                vuint64m4_t next_bit;
-                if (j < 64) {
-                    next_bit = __riscv_vsrl_vx_u64m4(num_hi, 63, vl);
-                    num_hi = __riscv_vsll_vx_u64m4(num_hi, 1, vl);
-                } else {
-                    next_bit = __riscv_vsrl_vx_u64m4(num_lo, 63, vl);
-                    num_lo = __riscv_vsll_vx_u64m4(num_lo, 1, vl);
-                }
+                vuint64m4_t next_bit = __riscv_vsrl_vx_u64m4(num_hi, 63, vl);
+                num_hi = __riscv_vsll_vx_u64m4(num_hi, 1, vl);
                 v_rem = __riscv_vor_vv_u64m4(v_rem, next_bit, vl);
                 v_quo = __riscv_vsll_vx_u64m4(v_quo, 1, vl);
-        
+                
                 vbool16_t mask = __riscv_vmsgeu_vv_u64m4_b16(v_rem, den, vl);
                 v_rem = __riscv_vsub_vv_u64m4_mu(mask, v_rem, v_rem, den, vl);
                 v_quo = __riscv_vor_vx_u64m4_mu(mask, v_quo, v_quo, 1, vl);
             }
-        
+            
+            // Process lower 64 bits from num_lo
+            for (int j = 0; j < 64; j++) {
+                v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
+                vuint64m4_t next_bit = __riscv_vsrl_vx_u64m4(num_lo, 63, vl);
+                num_lo = __riscv_vsll_vx_u64m4(num_lo, 1, vl);
+                v_rem = __riscv_vor_vv_u64m4(v_rem, next_bit, vl);
+                v_quo = __riscv_vsll_vx_u64m4(v_quo, 1, vl);
+                
+                vbool16_t mask = __riscv_vmsgeu_vv_u64m4_b16(v_rem, den, vl);
+                v_rem = __riscv_vsub_vv_u64m4_mu(mask, v_rem, v_rem, den, vl);
+                v_quo = __riscv_vor_vx_u64m4_mu(mask, v_quo, v_quo, 1, vl);
+            }
+            
             return v_quo;
         }
     #endif
