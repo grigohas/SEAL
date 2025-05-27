@@ -67,11 +67,9 @@ namespace seal
             }
 
              inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl)  {
-                  const uint64_t p = modulus.value();  // Assuming modulus_ is in scope
-              
                   // Replicate scalars across vector registers
                   vuint64m4_t vb = __riscv_vmv_v_x_u64m4(yquot, vl);
-                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(p, vl);
+                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(modulus.value(), vl);
                   vuint64m4_t vop = __riscv_vmv_v_x_u64m4(yop, vl);
               
                   // Unsigned high part of a * yquot
