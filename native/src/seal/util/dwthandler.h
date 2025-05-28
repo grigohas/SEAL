@@ -283,26 +283,26 @@ namespace seal
                             size_t processed = 0;
                            while (processed < total)
                             {
-                                size_t vl = __riscv_vsetvl_e64m8(total - processed);
-                            
-                                vuint64m8_t vx = __riscv_vle64_v_u64m8(x + processed, vl);
-                                vuint64m8_t vy = __riscv_vle64_v_u64m8(y + processed, vl);
-                            
+                                 size_t vl = __riscv_vsetvl_e64m4(total - processed);
+                        
+                                vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+                                vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
                                 // u + v
-                                vuint64m8_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
+                                 vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
                             
                                 // Guard the addition result
-                                vuint64m8_t vguard_add = arithmetic_.guard_vector_rvv(vadd, vl);
+                                vuint64m4_t vguard_add = arithmetic_.guard_vector_rvv(vadd, vl);
                             
                                 // u - v
-                                vuint64m8_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
+                                vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
                             
                                 // Multiply by root
-                                vuint64m8_t vmul_y = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
+                                vuint64m4_t vmul_y = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
+
                             
                                 // Store back
-                                __riscv_vse64_v_u64m8(x + processed, vguard_add, vl);
-                                __riscv_vse64_v_u64m8(y + processed, vmul_y, vl);
+                                __riscv_vse64_v_u64m4(x + processed, vguard_add, vl);
+                                __riscv_vse64_v_u64m4(y + processed, vmul_y, vl);
                             
                                 processed += vl;
                             }
