@@ -383,7 +383,7 @@ namespace seal
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
             }
 
-            size_t processed = 0;
+            processed = 0;
 
             while (processed < coeff_count_ - 1) {
                 size_t vl = __riscv_vsetvl_e64m8(coeff_count_ - 1 - processed);
