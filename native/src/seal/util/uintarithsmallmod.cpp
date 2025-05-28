@@ -115,43 +115,43 @@ namespace seal
         #if defined(__riscv_v_intrinsic)
           
             void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, long long* acc_out) {
-            uint64_t acc_lo = 0;
-            uint64_t acc_hi = 0;           
-            size_t i = 0;
-
-            while (i < count) {
-                // Set vector length for m4 (4× register width)
-                size_t vl = __riscv_vsetvl_e64m4(count - i);
-
-                // Load operands into vuint64m4_t vectors
-                vuint64m4_t vop1 = __riscv_vle64_v_u64m4(op1 + i, vl);
-                vuint64m4_t vop2 = __riscv_vle64_v_u64m4(op2 + i, vl);
-
-                // Multiply (low and high parts)
-                vuint64m4_t vlo = __riscv_vmul_vv_u64m4(vop1, vop2, vl);      // low 64 bits
-                vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vop1, vop2, vl);    // high 64 bits
-        
-                // Store results to memory for scalar accumulation
-                uint64_t lo[vl];
-                uint64_t hi[vl];
-                __riscv_vse64_v_u64m4(lo, vlo, vl);
-                __riscv_vse64_v_u64m4(hi, vhi, vl);
-        
-                // Accumulate in scalar 128-bit
-                for (size_t j = 0; j < vl; ++j) {
-                    uint64_t prev_lo = acc_lo;
-                    acc_lo += lo[j];
-                    if (acc_lo < prev_lo) {
-                        acc_hi++;
+                uint64_t acc_lo = 0;
+                uint64_t acc_hi = 0;           
+                size_t i = 0;
+            
+                while (i < count) {
+                    // Set vector length for m8 (8× register width)
+                    size_t vl = __riscv_vsetvl_e64m8(count - i);
+            
+                    // Load operands into vuint64m8_t vectors
+                    vuint64m8_t vop1 = __riscv_vle64_v_u64m8(op1 + i, vl);
+                    vuint64m8_t vop2 = __riscv_vle64_v_u64m8(op2 + i, vl);
+            
+                    // Multiply (low and high parts)
+                    vuint64m8_t vlo = __riscv_vmul_vv_u64m8(vop1, vop2, vl);      // low 64 bits
+                    vuint64m8_t vhi = __riscv_vmulhu_vv_u64m8(vop1, vop2, vl);    // high 64 bits
+            
+                    // Store results to memory for scalar accumulation
+                    uint64_t lo[vl];
+                    uint64_t hi[vl];
+                    __riscv_vse64_v_u64m8(lo, vlo, vl);
+                    __riscv_vse64_v_u64m8(hi, vhi, vl);
+            
+                    // Accumulate in scalar 128-bit
+                    for (size_t j = 0; j < vl; ++j) {
+                        uint64_t prev_lo = acc_lo;
+                        acc_lo += lo[j];
+                        if (acc_lo < prev_lo) {
+                            acc_hi++;
+                        }
+                        acc_hi += hi[j];
                     }
-                    acc_hi += hi[j];
+            
+                    i += vl;
                 }
-          
-                i += vl;
+                acc_out[0] = acc_lo;
+                acc_out[1] = acc_hi;
             }
-            acc_out[0] = acc_lo;
-            acc_out[1] = acc_hi;
-        }
         #endif
 
         uint64_t dot_product_mod(
