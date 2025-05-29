@@ -74,13 +74,10 @@ namespace seal
             }
 
              inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl)  {
-                  const uint64_t p = modulus.value();  // Assuming modulus_ is in scope
-              
-                  #pragma GCC unroll 0
-                  {
+                  
                   // Replicate scalars across vector registers
                   vuint64m4_t vb = __riscv_vmv_v_x_u64m4(yquot, vl);
-                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(p, vl);
+                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(modulus.value(), vl);
                   vuint64m4_t vop = __riscv_vmv_v_x_u64m4(yop, vl);
               
                   // Unsigned high part of a * yquot
@@ -95,11 +92,11 @@ namespace seal
                   // (a * yop) - (vhi * p)
                   vuint64m4_t vres = __riscv_vsub_vv_u64m4(vmul1, vmul2, vl);
 
-                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, p, vl);
+                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, modulus.value(), vl);
                   vuint64m4_t vcorrected = __riscv_vsub_vv_u64m4(vres, vp, vl);
 
                   return __riscv_vmerge_vvm_u64m4(vres, vcorrected, ge_mask, vl);
-              }
+              
               }
             
 
@@ -309,8 +306,6 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
                  size_t processed=0;
-                 #pragma GCC ivdep
-                 #pragma omp simd
                  while (processed < coeff_count) {
                     size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
                     
@@ -364,8 +359,8 @@ namespace seal
             auto start4 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)  
                 size_t processed = 0;
-                #pragma GCC ivdep
-                #pragma omp simd
+                
+                
                 while (processed < coeff_count) {
                   size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
               
