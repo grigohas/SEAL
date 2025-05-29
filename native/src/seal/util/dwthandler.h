@@ -11,6 +11,7 @@
 #include "seal/util/uintarithsmallmod.h"
 #include "seal/util/uintcore.h"
 #include <stdexcept>
+#include <omp.h>
 #ifdef __riscv_vector
 #include <riscv_vector.h>
 #endif
@@ -120,18 +121,19 @@ namespace seal
                 std::size_t gap = n >> 1;
                 std::size_t m = 1;
 
-                
-                     for (; m < (n >> 1); m <<= 1)
+                #pragma GCC ivdep
+                for (; m < (n >> 1); m <<= 1)
                     {
     
                         std::size_t offset = 0;
-                        
+                        #pragma omp parallel for if(m > 4) schedule(static) private(r, x, y)
                         for (size_t i = 0; i < m; i++) {
-                            r = *++roots;
-                            x = values + offset;
+                            r = roots[i + 1];
+                            x = values + offset + i * (gap << 1);
                             y = x + gap;
                     
                             size_t processed = 0;
+                            #pragma GCC ivdep
                             while (processed < gap) {
                                 
                                 size_t vl = __riscv_vsetvl_e64m4(gap - processed);
@@ -177,7 +179,8 @@ namespace seal
                 }
                 else
                 {
-                     for (std::size_t i = 0; i < m; i++)
+                    #pragma GCC unroll 4
+                    for (std::size_t i = 0; i < m; i++)
                     {
                         r = *++roots;
                         u = arithmetic_.guard(values[0]);
@@ -201,18 +204,21 @@ namespace seal
                     // variables for indexing
                     std::size_t gap = 1;
                     std::size_t m = n >> 1;
-                
-                     for (; m > 1; m >>= 1)
+                  
+                    #pragma GCC ivdep
+                    for (; m > 1; m >>= 1)
                     {
                         std::size_t offset = 0;
+                        #pragma omp parallel for if(m > 4) schedule(static) private(r, x, y)
                         for (std::size_t i = 0; i < m; i++)
                         {
-                            r = *++roots;
-                            x = values + offset;
+                            r = roots[i + 1];  // Avoid pointer arithmetic in parallel region
+                            x = values + offset + i * (gap << 1);
                             y = x + gap;
 
                             std::size_t processed = 0;
-                           while (processed < gap){
+                            #pragma GCC ivdep
+                            while (processed < gap){
                                 size_t vl = __riscv_vsetvl_e64m4(gap - processed);
                                 vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
                                 vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
@@ -225,7 +231,7 @@ namespace seal
                                 processed += vl;
                             }
                             offset += gap << 1;
-                             }
+                            }
 
                         gap <<= 1;
                         }
@@ -280,7 +286,8 @@ namespace seal
                         
                             size_t total = gap;
                             size_t processed = 0;
-                           while (processed < total)
+                            #pragma GCC ivdep
+                            while (processed < total)
                             {
                                  size_t vl = __riscv_vsetvl_e64m4(total - processed);
                         
