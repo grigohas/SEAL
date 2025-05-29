@@ -15,6 +15,7 @@ long int q=0;
 long int f=0;
 long int o=0;
 long int t=0;
+long int l=0;
 
 
 int main()
@@ -30,6 +31,7 @@ int main()
     cout <<"Dot:" <<  f << "ms" << endl;
     cout <<"To rev:" <<  o << "ms" << endl;
     cout <<"From rev:" <<  t << "ms" << endl;
+    cout <<"Coeff mod:" <<  l << "ms" << endl;
   
     /*while (true)
     {
