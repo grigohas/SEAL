@@ -105,226 +105,291 @@ namespace seal
             */
             #if defined(__riscv_v_intrinsic)
 
-              void transform_to_rev_rvv(ValueType *values, int log_n, const RootType *roots, const ScalarType *scalar = nullptr) const
-              {
-                  // constant transform size
-                  size_t n = size_t(1) << log_n;
-                  // registers to hold temporary values
-                  RootType r;
-                  ValueType u;
-                  ValueType v;
-                  // pointers for faster indexing
-                  ValueType *x = nullptr;
-                  ValueType *y = nullptr;
-                  // variables for indexing
-                  std::size_t gap = n >> 1;
-                  std::size_t m = 1;
-              
-                  // Main vectorized butterfly stages with flattened loops
-                  for (; m < (n >> 1); m <<= 1) {
-                      std::size_t total_elements = m * gap;
-                      std::size_t processed = 0;
-                      
-                      while (processed < total_elements) {
-                          // Calculate which group and position within group
-                          std::size_t group_idx = processed / gap;
-                          std::size_t elem_offset = processed % gap;
-                          
-                          // Calculate how many elements we can process from current position
-                          std::size_t remaining_in_group = gap - elem_offset;
-                          std::size_t vl = __riscv_vsetvl_e64m4(remaining_in_group);
-                          
-                          // Calculate base addresses for this group
-                          std::size_t base_offset = group_idx * (gap << 1);
-                          x = values + base_offset + elem_offset;
-                          y = x + gap;
-                          
-                          // Get root for this group (increment roots pointer on first element of each group)
-                          if (elem_offset == 0) {
-                              r = *++roots;
-                          }
-                          
-                          // Vector operations
-                          vuint64m4_t vx = __riscv_vle64_v_u64m4(x, vl);
-                          vuint64m4_t vy = __riscv_vle64_v_u64m4(y, vl);
-                          
-                          // Guard vector (reduce vx elements >= 2*modulus)
-                          vuint64m4_t vu = arithmetic_.guard_vector_rvv(vx, vl);
-                          
-                          // Multiply vy by root quotient modulo root operand
-                          vuint64m4_t vv = arithmetic_.mul_vector_rvv(vy, r.quotient, r.operand, vl);
-                          
-                          // Add vu + vv → vx
-                          vuint64m4_t vadd = arithmetic_.add_vector_rvv(vu, vv, vl);
-                          
-                          // Subtract vu - vv modulo root operand → vy
-                          vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vu, vv, vl);
-                          
-                          // Store results
-                          __riscv_vse64_v_u64m4(x, vadd, vl);
-                          __riscv_vse64_v_u64m4(y, vsub, vl);
-                          
-                          processed += vl;
-                      }
-                      
-                      gap >>= 1;
-                  }
-                  
-                  // Final stage - process remaining pairs
-                  if (scalar != nullptr) {
-                      RootType scaled_r;
-                      for (std::size_t i = 0; i < m; i++) {
-                          r = *++roots;
-                          scaled_r = arithmetic_.mul_root_scalar(r, *scalar);
-                          u = arithmetic_.mul_scalar(arithmetic_.guard(values[0]), *scalar);
-                          v = arithmetic_.mul_root(values[1], scaled_r);
-                          values[0] = arithmetic_.add(u, v);
-                          values[1] = arithmetic_.sub(u, v);
-                          values += 2;
-                      }
-                  } else {
-                      for (std::size_t i = 0; i < m; i++) {
-                          r = *++roots;
-                          u = arithmetic_.guard(values[0]);
-                          v = arithmetic_.mul_root(values[1], r);
-                          values[0] = arithmetic_.add(u, v);
-                          values[1] = arithmetic_.sub(u, v);
-                          values += 2;
-                      }
-                  }
-              }
-              void transform_from_rev_rvv(ValueType *values, int log_n, const RootType *roots, const ScalarType *scalar = nullptr) const {
-                  // constant transform size
-                  size_t n = size_t(1) << log_n;
-                  // registers to hold temporary values
-                  RootType r;
-                  ValueType u;
-                  ValueType v;
-                  // pointers for faster indexing
-                  ValueType *x = nullptr;
-                  ValueType *y = nullptr;
-                  // variables for indexing
-                  std::size_t gap = 1;
-                  std::size_t m = n >> 1;
-              
-                  // Main vectorized butterfly stages with flattened loops
-                  for (; m > 1; m >>= 1) {
-                      std::size_t total_elements = m * gap;
-                      std::size_t processed = 0;
-                      
-                      while (processed < total_elements) {
-                          // Calculate which group and position within group
-                          std::size_t group_idx = processed / gap;
-                          std::size_t elem_offset = processed % gap;
-                          
-                          // Calculate how many elements we can process from current position
-                          std::size_t remaining_in_group = gap - elem_offset;
-                          std::size_t vl = __riscv_vsetvl_e64m4(remaining_in_group);
-                          
-                          // Calculate base addresses for this group
-                          std::size_t base_offset = group_idx * (gap << 1);
-                          x = values + base_offset + elem_offset;
-                          y = x + gap;
-                          
-                          // Get root for this group (increment roots pointer on first element of each group)
-                          if (elem_offset == 0) {
-                              r = *++roots;
-                          }
-                          
-                          // Vector operations (inverse FFT butterfly)
-                          vuint64m4_t vx = __riscv_vle64_v_u64m4(x, vl);
-                          vuint64m4_t vy = __riscv_vle64_v_u64m4(y, vl);
-                          
-                          // Add vx + vy
-                          vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
-                          vadd = arithmetic_.guard_vector_rvv(vadd, vl);
-                          
-                          // Subtract vx - vy
-                          vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
-                          
-                          // Multiply subtraction result by root
-                          vuint64m4_t vmul = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
-                          
-                          // Store results
-                          __riscv_vse64_v_u64m4(x, vadd, vl);
-                          __riscv_vse64_v_u64m4(y, vmul, vl);
-                          
-                          processed += vl;
-                      }
-                      
-                      gap <<= 1;
-                  }
-              
-                  // Final stage - process remaining pairs
-                  if (scalar != nullptr) {
-                      r = *++roots;
-                      RootType scaled_r = arithmetic_.mul_root_scalar(r, *scalar);
-                      x = values;
-                      y = x + gap;
-                      
-                      if (gap < 4) {
-                          for (std::size_t j = 0; j < gap; j++) {
-                              u = arithmetic_.guard(*x);
-                              v = *y;
-                              *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
-                              *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
-                          }
-                      } else {
-                          for (std::size_t j = 0; j < gap; j += 4) {
-                              u = arithmetic_.guard(*x);
-                              v = *y;
-                              *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
-                              *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
-              
-                              u = arithmetic_.guard(*x);
-                              v = *y;
-                              *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
-                              *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
-              
-                              u = arithmetic_.guard(*x);
-                              v = *y;
-                              *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
-                              *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
-              
-                              u = arithmetic_.guard(*x);
-                              v = *y;
-                              *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
-                              *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
-                          }
-                      }
-                  } else {
-                      r = *++roots;
-                      x = values;
-                      y = x + gap;
-                      
-                      size_t total = gap;
-                      size_t processed = 0;
-                      while (processed < total) {
-                          size_t vl = __riscv_vsetvl_e64m4(total - processed);
-                          
-                          vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
-                          vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
-                          
-                          // u + v
-                          vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
-                          
-                          // Guard the addition result
-                          vuint64m4_t vguard_add = arithmetic_.guard_vector_rvv(vadd, vl);
-                          
-                          // u - v
-                          vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
-                          
-                          // Multiply by root
-                          vuint64m4_t vmul_y = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
-                          
-                          // Store back
-                          __riscv_vse64_v_u64m4(x + processed, vguard_add, vl);
-                          __riscv_vse64_v_u64m4(y + processed, vmul_y, vl);
-                          
-                          processed += vl;
-                      }
-                  }
-              }
+void transform_to_rev_rvv(ValueType *values, int log_n, const RootType *roots, const ScalarType *scalar = nullptr) const
+{
+    // constant transform size
+    size_t n = size_t(1) << log_n;
+    // registers to hold temporary values
+    RootType r;
+    ValueType u;
+    ValueType v;
+    // pointers for faster indexing
+    ValueType *x = nullptr;
+    ValueType *y = nullptr;
+    // variables for indexing
+    std::size_t gap = n >> 1;
+    std::size_t m = 1;
+
+    // Main vectorized butterfly stages with register blocking
+    for (; m < (n >> 1); m <<= 1) {
+        std::size_t offset = 0;
+        
+        for (size_t i = 0; i < m; i++) {
+            r = *++roots;
+            x = values + offset;
+            y = x + gap;
+            
+            size_t processed = 0;
+            
+            // Use dynamic vector length instead of hardcoded 4
+            size_t vl_base = __riscv_vsetvl_e64m4(gap);
+ 
+            
+            // Process in blocks of 2 vector lengths for better register utilization  
+            while (processed + 2 * vl_base <= gap) {
+                size_t vl = __riscv_vsetvl_e64m4(vl_base);
+                
+                // Load two blocks simultaneously
+                vuint64m4_t vx1 = __riscv_vle64_v_u64m4(x + processed, vl);
+                vuint64m4_t vy1 = __riscv_vle64_v_u64m4(y + processed, vl);
+                vuint64m4_t vx2 = __riscv_vle64_v_u64m4(x + processed + vl, vl);
+                vuint64m4_t vy2 = __riscv_vle64_v_u64m4(y + processed + vl, vl);
+                
+                // Interleave arithmetic operations to hide latency
+                // Block 1 operations
+                vuint64m4_t vu1 = arithmetic_.guard_vector_rvv(vx1, vl);
+                vuint64m4_t vv1 = arithmetic_.mul_vector_rvv(vy1, r.quotient, r.operand, vl);
+                
+                // Block 2 operations (interleaved)
+                vuint64m4_t vu2 = arithmetic_.guard_vector_rvv(vx2, vl);
+                vuint64m4_t vv2 = arithmetic_.mul_vector_rvv(vy2, r.quotient, r.operand, vl);
+                
+                // Complete block 1 operations
+                vuint64m4_t vadd1 = arithmetic_.add_vector_rvv(vu1, vv1, vl);
+                vuint64m4_t vsub1 = arithmetic_.sub_vector_rvv(vu1, vv1, vl);
+                
+                // Complete block 2 operations (interleaved)
+                vuint64m4_t vadd2 = arithmetic_.add_vector_rvv(vu2, vv2, vl);
+                vuint64m4_t vsub2 = arithmetic_.sub_vector_rvv(vu2, vv2, vl);
+                
+                // Store both blocks
+                __riscv_vse64_v_u64m4(x + processed, vadd1, vl);
+                __riscv_vse64_v_u64m4(y + processed, vsub1, vl);
+                __riscv_vse64_v_u64m4(x + processed + vl, vadd2, vl);
+                __riscv_vse64_v_u64m4(y + processed + vl, vsub2, vl);
+                
+                processed += 2 * vl;
+            }
+            
+            // Handle remaining elements with single vector processing
+            while (processed < gap) {
+                size_t vl = __riscv_vsetvl_e64m4(gap - processed);
+                
+                vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+                vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
+                
+                // Guard vector (reduce vx elements >= 2*modulus)
+                vuint64m4_t vu = arithmetic_.guard_vector_rvv(vx, vl);
+                
+                // Multiply vy by root quotient modulo root operand
+                vuint64m4_t vv = arithmetic_.mul_vector_rvv(vy, r.quotient, r.operand, vl);
+                
+                // Add vu + vv → vx
+                vuint64m4_t vadd = arithmetic_.add_vector_rvv(vu, vv, vl);
+                
+                // Subtract vu - vv modulo root operand → vy
+                vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vu, vv, vl);
+                
+                // Store results
+                __riscv_vse64_v_u64m4(x + processed, vadd, vl);
+                __riscv_vse64_v_u64m4(y + processed, vsub, vl);
+                
+                processed += vl;
+            }
+            
+            offset += gap << 1;
+        }
+        gap >>= 1;
+    }
+    
+    // Final stage - process remaining pairs
+    if (scalar != nullptr) {
+        RootType scaled_r;
+        for (std::size_t i = 0; i < m; i++) {
+            r = *++roots;
+            scaled_r = arithmetic_.mul_root_scalar(r, *scalar);
+            u = arithmetic_.mul_scalar(arithmetic_.guard(values[0]), *scalar);
+            v = arithmetic_.mul_root(values[1], scaled_r);
+            values[0] = arithmetic_.add(u, v);
+            values[1] = arithmetic_.sub(u, v);
+            values += 2;
+        }
+    } else {
+        for (std::size_t i = 0; i < m; i++) {
+            r = *++roots;
+            u = arithmetic_.guard(values[0]);
+            v = arithmetic_.mul_root(values[1], r);
+            values[0] = arithmetic_.add(u, v);
+            values[1] = arithmetic_.sub(u, v);
+            values += 2;
+        }
+    }
+}
+void transform_from_rev_rvv(ValueType *values, int log_n, const RootType *roots, const ScalarType *scalar = nullptr) const {
+    // constant transform size
+    size_t n = size_t(1) << log_n;
+    // registers to hold temporary values
+    RootType r;
+    ValueType u;
+    ValueType v;
+    // pointers for faster indexing
+    ValueType *x = nullptr;
+    ValueType *y = nullptr;
+    // variables for indexing
+    std::size_t gap = 1;
+    std::size_t m = n >> 1;
+
+    // Main vectorized butterfly stages with register blocking
+    for (; m > 1; m >>= 1) {
+        std::size_t offset = 0;
+        
+        for (std::size_t i = 0; i < m; i++) {
+            r = *++roots;
+            x = values + offset;
+            y = x + gap;
+
+            std::size_t processed = 0;
+            
+            // Use dynamic vector length instead of hardcoded 4
+            size_t vl_base = __riscv_vsetvl_e64m4(gap);
+           
+            
+            // Process in blocks of 2 vector lengths for better register utilization
+            while (processed + 2 * vl_base <= gap) {
+                size_t vl = __riscv_vsetvl_e64m4(vl_base);
+                
+                // Load two blocks simultaneously
+                vuint64m4_t vx1 = __riscv_vle64_v_u64m4(x + processed, vl);
+                vuint64m4_t vy1 = __riscv_vle64_v_u64m4(y + processed, vl);
+                vuint64m4_t vx2 = __riscv_vle64_v_u64m4(x + processed + vl, vl);
+                vuint64m4_t vy2 = __riscv_vle64_v_u64m4(y + processed + vl, vl);
+                
+                // Interleave arithmetic operations for inverse FFT
+                // Block 1: Add operations
+                vuint64m4_t vadd1 = arithmetic_.add_vector_rvv(vx1, vy1, vl);
+                vuint64m4_t vadd2 = arithmetic_.add_vector_rvv(vx2, vy2, vl);
+                
+                // Guard the addition results
+                vuint64m4_t vguard1 = arithmetic_.guard_vector_rvv(vadd1, vl);
+                vuint64m4_t vguard2 = arithmetic_.guard_vector_rvv(vadd2, vl);
+                
+                // Block 1: Subtract operations (interleaved)
+                vuint64m4_t vsub1 = arithmetic_.sub_vector_rvv(vx1, vy1, vl);
+                vuint64m4_t vsub2 = arithmetic_.sub_vector_rvv(vx2, vy2, vl);
+                
+                // Multiply subtraction results by root (interleaved)
+                vuint64m4_t vmul1 = arithmetic_.mul_vector_rvv(vsub1, r.quotient, r.operand, vl);
+                vuint64m4_t vmul2 = arithmetic_.mul_vector_rvv(vsub2, r.quotient, r.operand, vl);
+                
+                // Store both blocks
+                __riscv_vse64_v_u64m4(x + processed, vguard1, vl);
+                __riscv_vse64_v_u64m4(y + processed, vmul1, vl);
+                __riscv_vse64_v_u64m4(x + processed + vl, vguard2, vl);
+                __riscv_vse64_v_u64m4(y + processed + vl, vmul2, vl);
+                
+                processed += 2 * vl;
+            }
+            
+            // Handle remaining elements with single vector processing
+            while (processed < gap) {
+                size_t vl = __riscv_vsetvl_e64m4(gap - processed);
+                
+                vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+                vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
+                
+                // Add vx + vy
+                vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
+                vadd = arithmetic_.guard_vector_rvv(vadd, vl);
+                
+                // Subtract vx - vy
+                vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
+                
+                // Multiply subtraction result by root
+                vuint64m4_t vmul = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
+                
+                // Store results
+                __riscv_vse64_v_u64m4(x + processed, vadd, vl);
+                __riscv_vse64_v_u64m4(y + processed, vmul, vl);
+                
+                processed += vl;
+            }
+            
+            offset += gap << 1;
+        }
+
+        gap <<= 1;
+    }
+
+    // Final stage - process remaining pairs
+    if (scalar != nullptr) {
+        r = *++roots;
+        RootType scaled_r = arithmetic_.mul_root_scalar(r, *scalar);
+        x = values;
+        y = x + gap;
+        
+        if (gap < 4) {
+            for (std::size_t j = 0; j < gap; j++) {
+                u = arithmetic_.guard(*x);
+                v = *y;
+                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+            }
+        } else {
+            for (std::size_t j = 0; j < gap; j += 4) {
+                u = arithmetic_.guard(*x);
+                v = *y;
+                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+
+                u = arithmetic_.guard(*x);
+                v = *y;
+                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+
+                u = arithmetic_.guard(*x);
+                v = *y;
+                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+
+                u = arithmetic_.guard(*x);
+                v = *y;
+                *x++ = arithmetic_.mul_scalar(arithmetic_.guard(arithmetic_.add(u, v)), *scalar);
+                *y++ = arithmetic_.mul_root(arithmetic_.sub(u, v), scaled_r);
+            }
+        }
+    } else {
+        r = *++roots;
+        x = values;
+        y = x + gap;
+        
+        size_t total = gap;
+        size_t processed = 0;
+        while (processed < total) {
+            size_t vl = __riscv_vsetvl_e64m4(total - processed);
+            
+            vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
+            vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
+            
+            // u + v
+            vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
+            
+            // Guard the addition result
+            vuint64m4_t vguard_add = arithmetic_.guard_vector_rvv(vadd, vl);
+            
+            // u - v
+            vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
+            
+            // Multiply by root
+            vuint64m4_t vmul_y = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
+            
+            // Store back
+            __riscv_vse64_v_u64m4(x + processed, vguard_add, vl);
+            __riscv_vse64_v_u64m4(y + processed, vmul_y, vl);
+            
+            processed += vl;
+        }
+    }
+}
             #endif
 
             void transform_to_rev(
