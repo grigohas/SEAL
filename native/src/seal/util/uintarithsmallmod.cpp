@@ -7,15 +7,14 @@
 #include "seal/util/uintcore.h"
 #include <numeric>
 #include <random>
+#include <omp.h>
 #include <tuple>
 #ifdef __riscv_vector
 #include <riscv_vector.h>
 #endif
 
 using namespace std;
-using namespace std::chrono;
 
-extern long int f;
 
 namespace seal
 {
@@ -118,7 +117,7 @@ namespace seal
                 uint64_t acc_lo = 0;
                 uint64_t acc_hi = 0;           
                 size_t i = 0;
-    
+                #pragma GCC ivdep
                 while (i < count) {
                     // Set vector length for m4 (4× register width)
                     size_t vl = __riscv_vsetvl_e64m4(count - i);
@@ -138,6 +137,7 @@ namespace seal
                     __riscv_vse64_v_u64m4(hi, vhi, vl);
             
                     // Accumulate in scalar 128-bit
+                    #pragma GCC unroll 4
                     for (size_t j = 0; j < vl; ++j) {
                         uint64_t prev_lo = acc_lo;
                         acc_lo += lo[j];
