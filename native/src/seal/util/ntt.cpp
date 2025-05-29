@@ -335,11 +335,9 @@ namespace seal
                 for (size_t i = 1; i < coeff_count_; i++) {
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                 }
-                
-                {
                 size_t processed=0;
                 
-                {
+                
                 size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
                 vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
                 vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
@@ -351,8 +349,8 @@ namespace seal
                 
                     processed += vl;
                 }
-                }
-                }
+                
+                
                 
                 for(size_t i = 1; i < coeff_count_; i++){
                     size_t rev = reverse_bits(i, coeff_count_power_);
@@ -389,10 +387,10 @@ namespace seal
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
             }
             
-            {
+        
             processed=0;
             
-            {
+            
             vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
             num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
             den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
@@ -403,8 +401,8 @@ namespace seal
                 __riscv_vse64_v_u64m4(quotriscv1.data() + processed, quo_vec, vl);                
                 processed += vl;
             }
-            }
-            }
+            
+            
             
             for(size_t i = 1; i < coeff_count_; i++){
                 size_t rev = reverse_bits(i-1, coeff_count_power_)+1;
