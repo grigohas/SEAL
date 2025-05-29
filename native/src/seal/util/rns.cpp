@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <omp.h>
 
+
 using namespace std;
 using namespace std::chrono;
 extern long int f;
