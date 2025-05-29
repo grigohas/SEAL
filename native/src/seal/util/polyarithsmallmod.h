@@ -479,9 +479,16 @@ namespace seal
             });*/
             auto poly_modulus_degree = result.poly_modulus_degree();
             auto start6 = high_resolution_clock::now();
-            SEAL_ITERATE(iter(poly, modulus, result), coeff_modulus_size, [&](auto I) {
-                multiply_poly_scalar_coeffmod(get<0>(I), poly_modulus_degree, scalar, get<1>(I), get<2>(I));
-            });
+            #pragma omp parallel for
+            for (size_t i = 0; i < coeff_modulus_size; i++) {
+                multiply_poly_scalar_coeffmod(
+                    poly[i],              // get<0>(I)
+                    poly_modulus_degree,  // degree
+                    scalar,              // scalar
+                    modulus[i],          // get<1>(I)
+                    result[i]            // get<2>(I)
+                );
+            }
             auto stop6 = high_resolution_clock::now();
    	        auto duration6 = duration_cast<microseconds>(stop6 - start6);
             l+=duration6.count();
