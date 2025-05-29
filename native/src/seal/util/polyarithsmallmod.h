@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <stdexcept>
-#include <omp.h>
+
 using namespace std::chrono;
 
 extern long int l;
