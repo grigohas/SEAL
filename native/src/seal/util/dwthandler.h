@@ -11,7 +11,6 @@
 #include "seal/util/uintarithsmallmod.h"
 #include "seal/util/uintcore.h"
 #include <stdexcept>
-#include <omp.h>
 #ifdef __riscv_vector
 #include <riscv_vector.h>
 #endif
@@ -121,19 +120,19 @@ namespace seal
                 std::size_t gap = n >> 1;
                 std::size_t m = 1;
 
-                #pragma GCC ivdep
+                
                 for (; m < (n >> 1); m <<= 1)
                     {
     
                         std::size_t offset = 0;
-                        #pragma omp parallel for if(m > 4) schedule(static) private(r, x, y)
+                        
                         for (size_t i = 0; i < m; i++) {
                             r = roots[i + 1];
                             x = values + offset + i * (gap << 1);
                             y = x + gap;
                     
                             size_t processed = 0;
-                            #pragma GCC ivdep
+                            
                             while (processed < gap) {
                                 
                                 size_t vl = __riscv_vsetvl_e64m4(gap - processed);
@@ -179,7 +178,7 @@ namespace seal
                 }
                 else
                 {
-                    #pragma GCC unroll 4
+                    
                     for (std::size_t i = 0; i < m; i++)
                     {
                         r = *++roots;
@@ -205,11 +204,11 @@ namespace seal
                     std::size_t gap = 1;
                     std::size_t m = n >> 1;
                   
-                    #pragma GCC ivdep
+                    
                     for (; m > 1; m >>= 1)
                     {
                         std::size_t offset = 0;
-                        #pragma omp parallel for if(m > 4) schedule(static) private(r, x, y)
+                        
                         for (std::size_t i = 0; i < m; i++)
                         {
                             r = roots[i + 1];  // Avoid pointer arithmetic in parallel region
@@ -217,7 +216,7 @@ namespace seal
                             y = x + gap;
 
                             std::size_t processed = 0;
-                            #pragma GCC ivdep
+                            
                             while (processed < gap){
                                 size_t vl = __riscv_vsetvl_e64m4(gap - processed);
                                 vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
@@ -286,7 +285,7 @@ namespace seal
                         
                             size_t total = gap;
                             size_t processed = 0;
-                            #pragma GCC ivdep
+                            
                             while (processed < total)
                             {
                                  size_t vl = __riscv_vsetvl_e64m4(total - processed);
