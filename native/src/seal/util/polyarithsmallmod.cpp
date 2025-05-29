@@ -6,8 +6,8 @@
 #include "seal/util/uintcore.h"
 #ifdef __riscv_vector
 #include <riscv_vector.h>
-#include <omp.h>
 #endif
+#include <omp.h>
 
 #ifdef SEAL_USE_INTEL_HEXL
 #include "hexl/hexl.hpp"
