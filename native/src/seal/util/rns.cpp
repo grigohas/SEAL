@@ -474,7 +474,7 @@ namespace seal
    	          auto duration5 = duration_cast<microseconds>(stop5 - start5);
               f+=duration5.count();
         }
-        }
+        
 
         // See "An Improved RNS Variant of the BFV Homomorphic Encryption Scheme" (CT-RSA 2019) for details
         void BaseConverter::exact_convert_array(ConstRNSIter in, CoeffIter out, MemoryPoolHandle pool) const
