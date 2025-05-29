@@ -8,8 +8,11 @@
 #include "seal/util/uintarithmod.h"
 #include "seal/util/uintarithsmallmod.h"
 #include <algorithm>
+#include <omp.h>
 
 using namespace std;
+using namespace std::chrono;
+extern long int f;
 
 namespace seal
 {
@@ -454,12 +457,23 @@ namespace seal
                     }
                 });
 
-            SEAL_ITERATE(iter(out, base_change_matrix_, obase_.base()), obase_size, [&](auto I) {
+           /* SEAL_ITERATE(iter(out, base_change_matrix_, obase_.base()), obase_size, [&](auto I) {
                 SEAL_ITERATE(iter(get<0>(I), temp), count, [&](auto J) {
                     // Compute the base conversion sum modulo obase element
                     get<0>(J) = dot_product_mod(get<1>(J), get<1>(I).get(), ibase_size, get<2>(I));
                 });
-            });
+            });*/
+            auto start5 = high_resolution_clock::now();
+            #pragma omp parallel for collapse(2) schedule(dynamic)
+            for (size_t i = 0; i < obase_size; i++) {
+                  for (size_t j = 0; j < count; j++) {
+                      out[i][j] = dot_product_mod(temp[j], base_change_matrix_[i].get(), ibase_size, obase_.base()[i]);
+                  }
+              }
+              auto stop5 = high_resolution_clock::now();
+   	          auto duration5 = duration_cast<microseconds>(stop5 - start5);
+              f+=duration5.count();
+        }
         }
 
         // See "An Improved RNS Variant of the BFV Homomorphic Encryption Scheme" (CT-RSA 2019) for details
