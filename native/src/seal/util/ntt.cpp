@@ -12,6 +12,7 @@
 #include "seal/util/locks.h"
 #include "seal/util/pointer.h"
 #include <unordered_map>
+#include <omp.h>
 #include "hexl/hexl.hpp"
 #endif
 #ifdef __riscv_vector
@@ -248,6 +249,7 @@ namespace seal
             vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
             
             // Process upper 64 bits from num_hi
+            #pragma GCC unroll 4
            for (int j = 0; j < 64; j++) {
                 v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
                 vuint64m4_t next_bit = __riscv_vsrl_vx_u64m4(num_hi, 63, vl);
@@ -261,6 +263,7 @@ namespace seal
            }
             
             // Process lower 64 bits from num_lo
+            #pragma GCC unroll 4
             for (int j = 0; j < 64; j++) {
                 v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
                 vuint64m4_t next_bit = __riscv_vsrl_vx_u64m4(num_lo, 63, vl);
@@ -333,7 +336,11 @@ namespace seal
                 for (size_t i = 1; i < coeff_count_; i++) {
                     num[i] = multiply_uint_mod(num[i-1], root, modulus_);
                 }
+                #pragma omp parallel
+                {
                 size_t processed=0;
+                #pragma omp single
+                {
                 size_t vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
                 vuint64m4_t den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
                 vuint64m4_t num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
@@ -345,7 +352,9 @@ namespace seal
                 
                     processed += vl;
                 }
-            
+                }
+                }
+                #pragma omp parallel for
                 for(size_t i = 1; i < coeff_count_; i++){
                     size_t rev = reverse_bits(i, coeff_count_power_);
                     root_powers_[rev].operand = num[i - 1];
@@ -380,8 +389,11 @@ namespace seal
             for (size_t i = 1; i < coeff_count_; i++) {
                 num1[i] = multiply_uint_mod(num1[i-1], root, modulus_);
             }
-
+            #pragma omp parallel
+            {
             processed=0;
+            #pragma omp single
+            {
             vl = __riscv_vsetvl_e64m4(coeff_count_-1 - processed);
             num_lo = __riscv_vmv_v_x_u64m4(0, vl); // low 64 bits assumed zero
             den_vec = __riscv_vmv_v_x_u64m4(denom, vl);
@@ -392,7 +404,9 @@ namespace seal
                 __riscv_vse64_v_u64m4(quotriscv1.data() + processed, quo_vec, vl);                
                 processed += vl;
             }
-            
+            }
+            }
+            #pragma omp parallel for
             for(size_t i = 1; i < coeff_count_; i++){
                 size_t rev = reverse_bits(i-1, coeff_count_power_)+1;
                 inv_root_powers_[rev].operand = num1[i - 1];
