@@ -24,60 +24,62 @@ namespace seal
     {
         #if defined(__riscv_v_intrinsic)
         
-             inline vuint64m4_t barrett_reduce_rvv(vuint64m4_t op1,vuint64m4_t op2,uint64_t const_ratio_0,uint64_t const_ratio_1,uint64_t modulus_value,size_t vl)
-            {
-                // Step 1: Multiply op1 and op2
-                vuint64m4_t vconst_ratio_0 = __riscv_vmv_v_x_u64m4(const_ratio_0, vl);
-                vuint64m4_t vconst_ratio_1 = __riscv_vmv_v_x_u64m4(const_ratio_1, vl);
-                vuint64m4_t vmodulus = __riscv_vmv_v_x_u64m4(modulus_value, vl);
-                vuint64m4_t vzero = __riscv_vmv_v_x_u64m4(0, vl);
-                vuint64m4_t vone = __riscv_vmv_v_x_u64m4(1, vl);
-            
-                // Step 1: Multiply op1 and op2
-                vuint64m4_t z_low  = __riscv_vmul_vv_u64m4(op1, op2, vl);
-                vuint64m4_t z_high = __riscv_vmulhu_vv_u64m4(op1, op2, vl);
-            
-                // Step 2: Intermediate terms (optimized with pre-loaded constants)
-                vuint64m4_t carry1     = __riscv_vmulhu_vv_u64m4(z_low, vconst_ratio_0, vl);
-                vuint64m4_t tmp2_lo    = __riscv_vmul_vv_u64m4(z_low, vconst_ratio_1, vl);
-                vuint64m4_t tmp2_hi    = __riscv_vmulhu_vv_u64m4(z_low, vconst_ratio_1, vl);
-            
-                // sum = tmp2_lo + carry1
-                vuint64m4_t sum = __riscv_vadd_vv_u64m4(tmp2_lo, carry1, vl);
-                vbool16_t carry_mask = __riscv_vmsltu_vv_u64m4_b16(sum, tmp2_lo, vl);
-                vuint64m4_t carry2 = __riscv_vmerge_vvm_u64m4(vzero, vone, carry_mask, vl);
-            
-                vuint64m4_t tmp3 = __riscv_vadd_vv_u64m4(tmp2_hi, carry2, vl);
-            
-                // Step 3: More intermediate multiplications
-                tmp2_lo = __riscv_vmul_vv_u64m4(z_high, vconst_ratio_0, vl);
-                tmp2_hi = __riscv_vmulhu_vv_u64m4(z_high, vconst_ratio_0, vl);
-            
-                sum = __riscv_vadd_vv_u64m4(sum, tmp2_lo, vl);
-                carry_mask = __riscv_vmsltu_vv_u64m4_b16(sum, tmp2_lo, vl);
-                carry2 = __riscv_vmerge_vvm_u64m4(vzero, vone, carry_mask, vl);
-                vuint64m4_t carry3 = __riscv_vadd_vv_u64m4(carry2, tmp2_hi, vl);
-            
-                carry2 = __riscv_vmul_vv_u64m4(z_high, vconst_ratio_1, vl);
-                carry2 = __riscv_vadd_vv_u64m4(carry2, tmp3, vl);
-                carry2 = __riscv_vadd_vv_u64m4(carry2, carry3, vl);
-            
-                // Step 4: Final reduction
-                vuint64m4_t estimate = __riscv_vmul_vv_u64m4(carry2, vmodulus, vl);
-                vuint64m4_t reduced  = __riscv_vsub_vv_u64m4(z_low, estimate, vl);
-            
-                // Conditional correction if reduced >= modulus_value
-                vbool16_t overflow = __riscv_vmsgeu_vv_u64m4_b16(reduced, vmodulus, vl);
-                vuint64m4_t corrected = __riscv_vsub_vv_u64m4(reduced, vmodulus, vl);
-            
-                return __riscv_vmerge_vvm_u64m4(reduced, corrected, overflow, vl);
-            }
+             inline vuint64m4_t barrett_reduce_rvv(vuint64m4_t op1, vuint64m4_t op2, uint64_t const_ratio_0, uint64_t const_ratio_1,uint64_t modulus_value, size_t vl) {
+                  // Pre-load constants to avoid repeated vmv operations
+                  vuint64m4_t vconst_ratio_0 = __riscv_vmv_v_x_u64m4(const_ratio_0, vl);
+                  vuint64m4_t vconst_ratio_1 = __riscv_vmv_v_x_u64m4(const_ratio_1, vl);
+                  vuint64m4_t vmodulus = __riscv_vmv_v_x_u64m4(modulus_value, vl);
+                  vuint64m4_t vzero = __riscv_vmv_v_x_u64m4(0, vl);
+                  vuint64m4_t vone = __riscv_vmv_v_x_u64m4(1, vl);
+              
+                  // Step 1: Multiply op1 and op2
+                  vuint64m4_t z_low  = __riscv_vmul_vv_u64m4(op1, op2, vl);
+                  vuint64m4_t z_high = __riscv_vmulhu_vv_u64m4(op1, op2, vl);
+              
+                  // Step 2: Intermediate terms (optimized with pre-loaded constants)
+                  vuint64m4_t carry1     = __riscv_vmulhu_vv_u64m4(z_low, vconst_ratio_0, vl);
+                  vuint64m4_t tmp2_lo    = __riscv_vmul_vv_u64m4(z_low, vconst_ratio_1, vl);
+                  vuint64m4_t tmp2_hi    = __riscv_vmulhu_vv_u64m4(z_low, vconst_ratio_1, vl);
+              
+                  // sum = tmp2_lo + carry1
+                  vuint64m4_t sum = __riscv_vadd_vv_u64m4(tmp2_lo, carry1, vl);
+                  vbool16_t carry_mask = __riscv_vmsltu_vv_u64m4_b16(sum, tmp2_lo, vl);
+                  vuint64m4_t carry2 = __riscv_vmerge_vvm_u64m4(vzero, vone, carry_mask, vl);
+              
+                  vuint64m4_t tmp3 = __riscv_vadd_vv_u64m4(tmp2_hi, carry2, vl);
+              
+                  // Step 3: More intermediate multiplications
+                  tmp2_lo = __riscv_vmul_vv_u64m4(z_high, vconst_ratio_0, vl);
+                  tmp2_hi = __riscv_vmulhu_vv_u64m4(z_high, vconst_ratio_0, vl);
+              
+                  sum = __riscv_vadd_vv_u64m4(sum, tmp2_lo, vl);
+                  carry_mask = __riscv_vmsltu_vv_u64m4_b16(sum, tmp2_lo, vl);
+                  carry2 = __riscv_vmerge_vvm_u64m4(vzero, vone, carry_mask, vl);
+                  vuint64m4_t carry3 = __riscv_vadd_vv_u64m4(carry2, tmp2_hi, vl);
+              
+                  carry2 = __riscv_vmul_vv_u64m4(z_high, vconst_ratio_1, vl);
+                  carry2 = __riscv_vadd_vv_u64m4(carry2, tmp3, vl);
+                  carry2 = __riscv_vadd_vv_u64m4(carry2, carry3, vl);
+              
+                  // Step 4: Final reduction
+                  vuint64m4_t estimate = __riscv_vmul_vv_u64m4(carry2, vmodulus, vl);
+                  vuint64m4_t reduced  = __riscv_vsub_vv_u64m4(z_low, estimate, vl);
+              
+                  // Conditional correction if reduced >= modulus_value
+                  vbool16_t overflow = __riscv_vmsgeu_vv_u64m4_b16(reduced, vmodulus, vl);
+                  vuint64m4_t corrected = __riscv_vsub_vv_u64m4(reduced, vmodulus, vl);
+              
+                  return __riscv_vmerge_vvm_u64m4(reduced, corrected, overflow, vl);
+              }
 
              inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl)  {
+                  const uint64_t p = modulus.value();  // Assuming modulus_ is in scope
+              
+                  
                   
                   // Replicate scalars across vector registers
                   vuint64m4_t vb = __riscv_vmv_v_x_u64m4(yquot, vl);
-                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(modulus.value(), vl);
+                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(p, vl);
                   vuint64m4_t vop = __riscv_vmv_v_x_u64m4(yop, vl);
               
                   // Unsigned high part of a * yquot
@@ -92,13 +94,12 @@ namespace seal
                   // (a * yop) - (vhi * p)
                   vuint64m4_t vres = __riscv_vsub_vv_u64m4(vmul1, vmul2, vl);
 
-                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, modulus.value(), vl);
+                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, p, vl);
                   vuint64m4_t vcorrected = __riscv_vsub_vv_u64m4(vres, vp, vl);
 
                   return __riscv_vmerge_vvm_u64m4(vres, vcorrected, ge_mask, vl);
               
               }
-            
 
       #endif
 
@@ -306,6 +307,8 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
                  size_t processed=0;
+                 #pragma GCC ivdep
+                 
                  while (processed < coeff_count) {
                     size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
                     
@@ -359,20 +362,20 @@ namespace seal
             auto start4 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)  
                 size_t processed = 0;
-                
+                #pragma GCC ivdep
                 
                 while (processed < coeff_count) {
-                  size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
-              
-                  vuint64m4_t vop1 = __riscv_vle64_v_u64m4(operand1 + processed, vl);
-                  vuint64m4_t vop2 = __riscv_vle64_v_u64m4(operand2 + processed, vl);
-                  
-              
-                  vuint64m4_t vres = barrett_reduce_rvv(vop1, vop2, const_ratio_0, const_ratio_1, modulus_value, vl);
-              
-                  __riscv_vse64_v_u64m4(result + processed, vres, vl);
-                  processed += vl;
-              }
+                    size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
+                
+                    vuint64m4_t vop1 = __riscv_vle64_v_u64m4(operand1 + processed, vl);
+                    vuint64m4_t vop2 = __riscv_vle64_v_u64m4(operand2 + processed, vl);
+                    
+                
+                    vuint64m4_t vres = barrett_reduce_rvv(vop1, vop2, const_ratio_0, const_ratio_1, modulus_value, vl);
+                
+                    __riscv_vse64_v_u64m4(result + processed, vres, vl);
+                    processed += vl;
+                }
             #else
 
             SEAL_ITERATE(iter(operand1, operand2, result), coeff_count, [&](auto I) {
