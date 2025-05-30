@@ -82,7 +82,7 @@ namespace seal
                   // (a * yop) - (vhi * p)
                   vuint64m4_t vres = __riscv_vsub_vv_u64m4(vmul1, vmul2, vl);
 
-                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, vp, vl);
+                  vbool16_t ge_mask = __riscv_vmsgeu_vv_u64m4_b16(vres, cp, vl);
                   vuint64m4_t vcorrected = __riscv_vsub_vv_u64m4(vres, vp, vl);
 
                   return __riscv_vmerge_vvm_u64m4(vres, vcorrected, ge_mask, vl);
