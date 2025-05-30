@@ -284,7 +284,7 @@ namespace seal
                 accumulator[0] = dot_product_mod(operand1 + 16, operand2 + 16, count - 16, modulus);
                 goto largest_case;
             };
-            #endif
+            
             return barrett_reduce_128(accumulator, modulus);
         }
     } // namespace util
