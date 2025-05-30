@@ -23,11 +23,9 @@ namespace seal
     {
         #if defined(__riscv_v_intrinsic)
         
-             inline vuint64m4_t barrett_reduce_rvv(vuint64m4_t op1, vuint64m4_t op2, uint64_t const_ratio_0, uint64_t const_ratio_1,uint64_t modulus_value, size_t vl) {
+             inline vuint64m4_t barrett_reduce_rvv(vuint64m4_t op1, vuint64m4_t op2, vuint64m4_t vconst_ratio_0, vuint64m4_t vconst_ratio_1,vuint64m4_t vmodulus, size_t vl) {
                   // Pre-load constants to avoid repeated vmv operations
-                  vuint64m4_t vconst_ratio_0 = __riscv_vmv_v_x_u64m4(const_ratio_0, vl);
-                  vuint64m4_t vconst_ratio_1 = __riscv_vmv_v_x_u64m4(const_ratio_1, vl);
-                  vuint64m4_t vmodulus = __riscv_vmv_v_x_u64m4(modulus_value, vl);
+                  
                   vuint64m4_t vzero = __riscv_vmv_v_x_u64m4(0, vl);
                   vuint64m4_t vone = __riscv_vmv_v_x_u64m4(1, vl);
               
@@ -71,16 +69,7 @@ namespace seal
                   return __riscv_vmerge_vvm_u64m4(reduced, corrected, overflow, vl);
               }
 
-             inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl)  {
-                  const uint64_t p = modulus.value();  // Assuming modulus_ is in scope
-              
-                  
-                  
-                  // Replicate scalars across vector registers
-                  vuint64m4_t vb = __riscv_vmv_v_x_u64m4(yquot, vl);
-                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(p, vl);
-                  vuint64m4_t vop = __riscv_vmv_v_x_u64m4(yop, vl);
-              
+             inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const vuint64m4_t vb, const vuint64m4_t vop, vuint64m4_t vp, size_t vl)  {
                   // Unsigned high part of a * yquot
                   vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(a, vb, vl);
               
@@ -306,13 +295,15 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
                  size_t processed=0;
-                 
+                 size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
+                 vuint64m4_t vb = __riscv_vmv_v_x_u64m4(scalar.quotient, vl);
+                 vuint64m4_t vop = __riscv_vmv_v_x_u64m4(scalar.operand, vl);
+                 vuint64m4_t vp = __riscv_vmv_v_x_u64m4(modulus.value(), vl);
                  
                  while (processed < coeff_count) {
-                    size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
-                    
+                    vl = __riscv_vsetvl_e64m4(coeff_count - processed);
                     vuint64m4_t vx = __riscv_vle64_v_u64m4(poly + processed, vl);
-                    vuint64m4_t vv = multiply_uint_mod_rvv(vx, scalar.quotient, scalar.operand, modulus,vl) ;
+                    vuint64m4_t vv = multiply_uint_mod_rvv(vx,vb, vop, vp,vl) ;
                     
                     __riscv_vse64_v_u64m4(result + processed, vv, vl);
                     processed += vl;
@@ -361,6 +352,9 @@ namespace seal
             auto start4 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)  
                 size_t processed = 0;
+                vuint64m4_t vconst_ratio_0 = __riscv_vmv_v_x_u64m4(const_ratio_0, vl);
+                vuint64m4_t vconst_ratio_1 = __riscv_vmv_v_x_u64m4(const_ratio_1, vl);
+                vuint64m4_t vmodulus = __riscv_vmv_v_x_u64m4(modulus_value, vl);
                 
                 
                 while (processed < coeff_count) {
@@ -370,7 +364,7 @@ namespace seal
                     vuint64m4_t vop2 = __riscv_vle64_v_u64m4(operand2 + processed, vl);
                     
                 
-                    vuint64m4_t vres = barrett_reduce_rvv(vop1, vop2, const_ratio_0, const_ratio_1, modulus_value, vl);
+                    vuint64m4_t vres = barrett_reduce_rvv(vop1, vop2, vconst_ratio_0, vconst_ratio_1, vmodulus, vl);
                 
                     __riscv_vse64_v_u64m4(result + processed, vres, vl);
                     processed += vl;
