@@ -112,7 +112,7 @@ namespace seal
         }
         #if defined(__riscv_v_intrinsic)
           
-            void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, long long* acc_out) {
+            /*void vector_mult_accumulate_u64_to_u128(const uint64_t* op1, const uint64_t* op2, size_t count, long long* acc_out) {
                 uint64_t acc_lo = 0;
                 uint64_t acc_hi = 0;           
                 size_t i = 0;
@@ -150,7 +150,72 @@ namespace seal
                 }
                 acc_out[0] = acc_lo;
                 acc_out[1] = acc_hi;
+            }*/
+            void vector_dot_product_mod_batch(const uint64_t** temps,const uint64_t* base_row,size_t count,size_t ibase_size,const Modulus* mod,uint64_t* results_out)           
+            {
+                
+                // Initialize scalar accumulators for each j
+                uint64_t* acc_lo = new uint64_t[count]();  // zero-initialized
+                uint64_t* acc_hi = new uint64_t[count]();  // zero-initialized
+                
+                // Process elements k in the dot product
+                for (size_t k = 0; k < ibase_size; k++) {
+                    uint64_t base_val = base_row[k];
+                    
+                    // Process j's in vector batches
+                    for (size_t j_batch = 0; j_batch < count; ) {
+                        size_t vl = __riscv_vsetvl_e64m4(count - j_batch);
+                        
+                        // Load temp values for this k across multiple j's
+                        uint64_t temp_vals[vl];
+                        for (size_t j = 0; j < vl; j++) {
+                            temp_vals[j] = temps[j_batch + j][k];
+                           
+                            
+                        }
+                        
+                        vuint64m4_t vtemp = __riscv_vle64_v_u64m4(temp_vals, vl);
+                        vuint64m4_t vbase = __riscv_vmv_v_x_u64m4(base_val, vl);
+                        
+                        // Multiply (low and high parts)
+                        vuint64m4_t vlo = __riscv_vmul_vv_u64m4(vtemp, vbase, vl);
+                        vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vtemp, vbase, vl);
+                        
+                        // Store results to memory for scalar accumulation
+                        uint64_t lo[vl];
+                        uint64_t hi[vl];
+                        __riscv_vse64_v_u64m4(lo, vlo, vl);
+                        __riscv_vse64_v_u64m4(hi, vhi, vl);
+                        
+                        // Accumulate in scalar 128-bit - same pattern as your original
+                        for (size_t j = 0; j < vl; ++j) {
+                            size_t idx = j_batch + j;
+                            uint64_t prev_lo = acc_lo[idx];
+                            acc_lo[idx] += lo[j];
+                            if (acc_lo[idx] < prev_lo) {
+                                acc_hi[idx]++;
+                            }
+                            acc_hi[idx] += hi[j];
+                        }
+                        
+                        j_batch += vl;
+                    }
+                }
+                
+                barrett_reduce_128_batch(acc_lo, acc_hi, count, *mod, results_out);
+                
+               /* // Final reduction for all j's
+                for (size_t j = 0; j < count; j++) {
+                    unsigned long long acc[2] = {acc_lo[j], acc_hi[j]};
+                    results_out[j] = barrett_reduce_128(acc, *mod);
+                }
+                */
+                delete[] acc_lo;
+                delete[] acc_hi;
             }
+
+
+
         #endif
 
         uint64_t dot_product_mod(
@@ -158,10 +223,10 @@ namespace seal
         {
             static_assert(SEAL_MULTIPLY_ACCUMULATE_MOD_MAX >= 16, "SEAL_MULTIPLY_ACCUMULATE_MOD_MAX");
             unsigned long long accumulator[2]{ 0, 0 };
-            //auto start5 = high_resolution_clock::now();
-            #if defined(__riscv_v_intrinsic) 
+            
+            /*#if defined(__riscv_v_intrinsic) 
               vector_mult_accumulate_u64_to_u128(operand1,operand2,count,(long long*)accumulator);
-            #else
+            #else*/
             switch (count)
             {
             case 0:
@@ -220,9 +285,6 @@ namespace seal
                 goto largest_case;
             };
             #endif
-           // auto stop5 = high_resolution_clock::now();
-   	         // auto duration5 = duration_cast<microseconds>(stop5 - start5);
-            //  f+=duration5.count();
             return barrett_reduce_128(accumulator, modulus);
         }
     } // namespace util
