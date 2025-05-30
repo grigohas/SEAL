@@ -466,11 +466,27 @@ namespace seal
             });*/
             auto start5 = high_resolution_clock::now();
             
-            for (size_t i = 0; i < obase_size; i++) {
+            #if defined(__riscv_v_intrinsic)
+              for (size_t i = 0; i < obase_size; i++) {
+                  const uint64_t* base_row = base_change_matrix_[i].get();
+                  const Modulus& mod = obase_.base()[i];
+                  
+                  // Prepare array of temp pointers
+                  const uint64_t* temp_ptrs[count];
                   for (size_t j = 0; j < count; j++) {
+                      temp_ptrs[j] = temp[j];
+                  }
+                  
+                  // BEST: Write directly to out[i] - no extra allocation needed
+                  vector_dot_product_mod_batch(temp_ptrs, base_row, count, ibase_size, &mod, out[i]);
+              }
+              #else
+                for (size_t i = 0; i < obase_size; i++) {
+                  for (size_t j = 0; j < count; j++) {                  
                       out[i][j] = dot_product_mod(temp[j], base_change_matrix_[i].get(), ibase_size, obase_.base()[i]);
                   }
-              }
+                  }
+              #endif  
               auto stop5 = high_resolution_clock::now();
    	          auto duration5 = duration_cast<microseconds>(stop5 - start5);
               f+=duration5.count();
