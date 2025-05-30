@@ -69,7 +69,12 @@ namespace seal
                   return __riscv_vmerge_vvm_u64m4(reduced, corrected, overflow, vl);
               }
 
-             inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const vuint64m4_t vb, const vuint64m4_t vop, vuint64m4_t vp, size_t vl)  {
+            inline vuint64m4_t multiply_uint_mod_rvv(const vuint64m4_t a, const uint64_t yquot, const uint64_t yop, const Modulus &modulus, size_t vl)  {
+                  
+                  vuint64m4_t vb = __riscv_vmv_v_x_u64m4(yquot, vl);
+                  vuint64m4_t vop = __riscv_vmv_v_x_u64m4(yop, vl);
+                  vuint64m4_t vp = __riscv_vmv_v_x_u64m4(modulus.value(), vl);
+                  
                   // Unsigned high part of a * yquot
                   vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(a, vb, vl);
               
@@ -88,7 +93,6 @@ namespace seal
                   return __riscv_vmerge_vvm_u64m4(vres, vcorrected, ge_mask, vl);
               
               }
-
       #endif
 
         void modulo_poly_coeffs(ConstCoeffIter poly, std::size_t coeff_count, const Modulus &modulus, CoeffIter result)
@@ -295,15 +299,11 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
                  size_t processed=0;
-                 size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
-                 vuint64m4_t vb = __riscv_vmv_v_x_u64m4(scalar.quotient, vl);
-                 vuint64m4_t vop = __riscv_vmv_v_x_u64m4(scalar.operand, vl);
-                 vuint64m4_t vp = __riscv_vmv_v_x_u64m4(modulus.value(), vl);
                  
                  while (processed < coeff_count) {
-                    vl = __riscv_vsetvl_e64m4(coeff_count - processed);
+                    size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
                     vuint64m4_t vx = __riscv_vle64_v_u64m4(poly + processed, vl);
-                    vuint64m4_t vv = multiply_uint_mod_rvv(vx,vb, vop, vp,vl) ;
+                    vuint64m4_t vv = multiply_uint_mod_rvv(vx,scalar.quotient, scalar.operand, modulus,vl) ;
                     
                     __riscv_vse64_v_u64m4(result + processed, vv, vl);
                     processed += vl;
