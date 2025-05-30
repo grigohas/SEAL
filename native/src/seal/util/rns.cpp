@@ -8,7 +8,7 @@
 #include "seal/util/uintarithmod.h"
 #include "seal/util/uintarithsmallmod.h"
 #include <algorithm>
-#include <omp.h>
+
 
 
 using namespace std;
@@ -465,7 +465,7 @@ namespace seal
                 });
             });*/
             auto start5 = high_resolution_clock::now();
-            #pragma omp parallel for collapse(2) schedule(dynamic)
+            
             for (size_t i = 0; i < obase_size; i++) {
                   for (size_t j = 0; j < count; j++) {
                       out[i][j] = dot_product_mod(temp[j], base_change_matrix_[i].get(), ibase_size, obase_.base()[i]);
