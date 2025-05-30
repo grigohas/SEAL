@@ -82,7 +82,7 @@ namespace seal
                   // (a * yop) - (vhi * p)
                   vuint64m4_t vres = __riscv_vsub_vv_u64m4(vmul1, vmul2, vl);
 
-                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, p, vl);
+                  vbool16_t ge_mask = __riscv_vmsgeu_vx_u64m4_b16(vres, vp, vl);
                   vuint64m4_t vcorrected = __riscv_vsub_vv_u64m4(vres, vp, vl);
 
                   return __riscv_vmerge_vvm_u64m4(vres, vcorrected, ge_mask, vl);
@@ -352,13 +352,14 @@ namespace seal
             auto start4 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)  
                 size_t processed = 0;
+                size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
                 vuint64m4_t vconst_ratio_0 = __riscv_vmv_v_x_u64m4(const_ratio_0, vl);
                 vuint64m4_t vconst_ratio_1 = __riscv_vmv_v_x_u64m4(const_ratio_1, vl);
                 vuint64m4_t vmodulus = __riscv_vmv_v_x_u64m4(modulus_value, vl);
                 
                 
                 while (processed < coeff_count) {
-                    size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
+                    vl = __riscv_vsetvl_e64m4(coeff_count - processed);
                 
                     vuint64m4_t vop1 = __riscv_vle64_v_u64m4(operand1 + processed, vl);
                     vuint64m4_t vop2 = __riscv_vle64_v_u64m4(operand2 + processed, vl);
