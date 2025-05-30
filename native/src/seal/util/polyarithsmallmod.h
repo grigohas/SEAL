@@ -481,13 +481,7 @@ namespace seal
             auto start6 = high_resolution_clock::now();
             
             for (size_t i = 0; i < coeff_modulus_size; i++) {
-                multiply_poly_scalar_coeffmod(
-                    poly[i],              // get<0>(I)
-                    poly_modulus_degree,  // degree
-                    scalar,              // scalar
-                    modulus[i],          // get<1>(I)
-                    result[i]            // get<2>(I)
-                );
+                multiply_poly_scalar_coeffmod(poly[i],poly_modulus_degree,scalar,modulus[i],result[i]);
             }
             auto stop6 = high_resolution_clock::now();
    	        auto duration6 = duration_cast<microseconds>(stop6 - start6);
