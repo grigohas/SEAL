@@ -7,7 +7,6 @@
 #ifdef __riscv_vector
 #include <riscv_vector.h>
 #endif
-#include <omp.h>
 
 #ifdef SEAL_USE_INTEL_HEXL
 #include "hexl/hexl.hpp"
@@ -307,7 +306,7 @@ namespace seal
 
             #if defined(__riscv_v_intrinsic)
                  size_t processed=0;
-                 #pragma GCC ivdep
+                 
                  
                  while (processed < coeff_count) {
                     size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
@@ -362,7 +361,7 @@ namespace seal
             auto start4 = high_resolution_clock::now();
             #if defined(__riscv_v_intrinsic)  
                 size_t processed = 0;
-                #pragma GCC ivdep
+                
                 
                 while (processed < coeff_count) {
                     size_t vl = __riscv_vsetvl_e64m4(coeff_count - processed);
