@@ -523,7 +523,8 @@ namespace seal
         Computes <operand1, operand2> mod modulus.
         Correctness: Follows the condition of barrett_reduce_128.
         */
-        SEAL_NODISCARD std::uint64_t dot_product_mod(
-            const std::uint64_t *operand1, const std::uint64_t *operand2, std::size_t count, const Modulus &modulus);
+        SEAL_NODISCARD std::uint64_t dot_product_mod(const std::uint64_t *operand1, const std::uint64_t *operand2, std::size_t count, const Modulus &modulus);
+        void vector_dot_product_mod_batch(const uint64_t** temps,const uint64_t* base_row,size_t count,size_t ibase_size,const Modulus* mod,uint64_t* results_out) ;
+
     } // namespace util
 } // namespace seal
