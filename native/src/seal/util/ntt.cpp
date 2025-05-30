@@ -12,7 +12,6 @@
 #include "seal/util/locks.h"
 #include "seal/util/pointer.h"
 #include <unordered_map>
-#include <omp.h>
 #include "hexl/hexl.hpp"
 #endif
 #ifdef __riscv_vector
@@ -249,7 +248,7 @@ namespace seal
             vuint64m4_t v_rem = __riscv_vmv_v_x_u64m4(0, vl);
             
             // Process upper 64 bits from num_hi
-           //#pragma GCC unroll 4
+           
            for (int j = 0; j < 64; j++) {
                 v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
                 vuint64m4_t next_bit = __riscv_vsrl_vx_u64m4(num_hi, 63, vl);
@@ -263,7 +262,7 @@ namespace seal
            }
             
             // Process lower 64 bits from num_lo
-           // #pragma GCC unroll 4
+          
             for (int j = 0; j < 64; j++) {
                 v_rem = __riscv_vsll_vx_u64m4(v_rem, 1, vl);
                 vuint64m4_t next_bit = __riscv_vsrl_vx_u64m4(num_lo, 63, vl);
@@ -354,7 +353,7 @@ namespace seal
                 }
                 
                 
-                #pragma omp parallel for
+               
                 for(size_t i = 1; i < coeff_count_; i++){
                     size_t rev = reverse_bits(i, coeff_count_power_);
                     root_powers_[rev].operand = num[i - 1];
@@ -406,7 +405,7 @@ namespace seal
             }
             
             
-            #pragma omp parallel for
+            
             for(size_t i = 1; i < coeff_count_; i++){
                 size_t rev = reverse_bits(i-1, coeff_count_power_)+1;
                 inv_root_powers_[rev].operand = num1[i - 1];
