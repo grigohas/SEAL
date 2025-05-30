@@ -479,7 +479,7 @@ namespace seal
             });*/
             auto poly_modulus_degree = result.poly_modulus_degree();
             auto start6 = high_resolution_clock::now();
-            #pragma omp parallel for
+            
             for (size_t i = 0; i < coeff_modulus_size; i++) {
                 multiply_poly_scalar_coeffmod(
                     poly[i],              // get<0>(I)
