@@ -169,9 +169,7 @@ namespace seal
                         // Load temp values for this k across multiple j's
                         uint64_t temp_vals[vl];
                         for (size_t j = 0; j < vl; j++) {
-                            temp_vals[j] = temps[j_batch + j][k];
-                           
-                            
+                            temp_vals[j] = temps[j_batch + j][k];   
                         }
                         
                         vuint64m4_t vtemp = __riscv_vle64_v_u64m4(temp_vals, vl);
@@ -197,24 +195,14 @@ namespace seal
                             }
                             acc_hi[idx] += hi[j];
                         }
-                        
                         j_batch += vl;
                     }
                 }
-                
                 barrett_reduce_128_batch(acc_lo, acc_hi, count, *mod, results_out);
                 
-               /* // Final reduction for all j's
-                for (size_t j = 0; j < count; j++) {
-                    unsigned long long acc[2] = {acc_lo[j], acc_hi[j]};
-                    results_out[j] = barrett_reduce_128(acc, *mod);
-                }
-                */
                 delete[] acc_lo;
                 delete[] acc_hi;
             }
-
-
 
         #endif
 
