@@ -123,9 +123,7 @@ namespace seal
                 
                 for (; m < (n >> 1); m <<= 1)
                     {
-    
                         std::size_t offset = 0;
-                      
                         for (size_t i = 0; i < m; i++) {
                             r = *++roots;
                             x = values + offset;
@@ -136,19 +134,14 @@ namespace seal
                             while (processed < gap) {
                                 
                                 size_t vl = __riscv_vsetvl_e64m4(gap - processed);
-                    
                                 vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
                                 vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
-
                                 // Guard vector (reduce vx elements >= 2*modulus)
-                                vuint64m4_t vu = arithmetic_.guard_vector_rvv(vx, vl);
-        
+                                vuint64m4_t vu = arithmetic_.guard_vector_rvv(vx, vl);        
                                 // Multiply vy by root quotient modulo root operand
-                                vuint64m4_t vv = arithmetic_.mul_vector_rvv(vy, r.quotient, r.operand, vl);
-                                             
+                                vuint64m4_t vv = arithmetic_.mul_vector_rvv(vy, r.quotient, r.operand, vl);             
                                 // Add vu + vmul → vx
                                 vuint64m4_t vadd = arithmetic_.add_vector_rvv(vu, vv, vl);
-                    
                                 // Subtract vu - vmul modulo root operand → vy
                                 vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vu, vv, vl);
                                 // Store results
@@ -207,7 +200,6 @@ namespace seal
                     for (; m > 1; m >>= 1)
                     {
                         std::size_t offset = 0;
-                       
                         for (std::size_t i = 0; i < m; i++)
                         {
                              r = *++roots;
@@ -282,36 +274,29 @@ namespace seal
                             x = values;
                             y = x + gap;
                         
-                            size_t total = gap;
                             size_t processed = 0;
                             
-                            while (processed < total)
+                            while (processed < gap)
                             {
-                                 size_t vl = __riscv_vsetvl_e64m4(total - processed);
-                        
+                                size_t vl = __riscv_vsetvl_e64m4(gap - processed);
                                 vuint64m4_t vx = __riscv_vle64_v_u64m4(x + processed, vl);
                                 vuint64m4_t vy = __riscv_vle64_v_u64m4(y + processed, vl);
                                 // u + v
-                                 vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
-                            
+                                vuint64m4_t vadd = arithmetic_.add_vector_rvv(vx, vy, vl);
                                 // Guard the addition result
                                 vuint64m4_t vguard_add = arithmetic_.guard_vector_rvv(vadd, vl);
-                            
                                 // u - v
                                 vuint64m4_t vsub = arithmetic_.sub_vector_rvv(vx, vy, vl);
-                            
                                 // Multiply by root
                                 vuint64m4_t vmul_y = arithmetic_.mul_vector_rvv(vsub, r.quotient, r.operand, vl);
-
-                            
                                 // Store back
                                 __riscv_vse64_v_u64m4(x + processed, vguard_add, vl);
                                 __riscv_vse64_v_u64m4(y + processed, vmul_y, vl);
                             
                                 processed += vl;
                             }
-                            }
                         }
+                    }
             #endif
 
             void transform_to_rev(
