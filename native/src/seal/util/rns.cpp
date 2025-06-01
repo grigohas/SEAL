@@ -478,7 +478,7 @@ namespace seal
                   const uint64_t** temp_ptrs = (const uint64_t**)malloc(count * sizeof(uint64_t*));
 
                   // Tell compiler it's safe to vectorize
-                  #pragma omp simd
+                  
                   for (size_t j = 0; j < count; j++) {
                       temp_ptrs[j] = temp[j];
                   }
