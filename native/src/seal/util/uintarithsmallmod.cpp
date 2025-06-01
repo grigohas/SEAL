@@ -151,63 +151,55 @@ namespace seal
                 acc_out[0] = acc_lo;
                 acc_out[1] = acc_hi;
             }*/
-            void vector_dot_product_mod_batch(const uint64_t** temps,const uint64_t* base_row,size_t count,size_t ibase_size,const Modulus* mod,uint64_t* results_out)           
-            {
-                
-                // Initialize scalar accumulators for each j
-                uint64_t* acc_lo = new uint64_t[count]();  // zero-initialized
-                uint64_t* acc_hi = new uint64_t[count]();  // zero-initialized
-                
-                // Process elements k in the dot product
-                for (size_t k = 0; k < ibase_size; k++) {
-                    uint64_t base_val = base_row[k];
-                    
-                    // Process j's in vector batches
-                    for (size_t j_batch = 0; j_batch < count; ) {
-                        size_t vl = __riscv_vsetvl_e64m4(count - j_batch);
-                        
-                        // Load temp values for this k across multiple j's
-                        /*uint64_t temp_vals[vl];
-                        for (size_t j = 0; j < vl; j++) {
-                            temp_vals[j] = temps[j_batch + j][k];   
-                        }*/
-
-                        uint64_t temp_vals[vl];
-                        for (size_t j = 0; j < vl; j++) {
-                           temp_vals[j] = temps[j_batch + j][k];
-                         }
-                        
-                        vuint64m4_t vtemp = __riscv_vle64_v_u64m4(temp_vals, vl);
-                        vuint64m4_t vbase = __riscv_vmv_v_x_u64m4(base_val, vl);
-                        
-                        // Multiply (low and high parts)
-                        vuint64m4_t vlo = __riscv_vmul_vv_u64m4(vtemp, vbase, vl);
-                        vuint64m4_t vhi = __riscv_vmulhu_vv_u64m4(vtemp, vbase, vl);
-                        
-                        // Store results to memory for scalar accumulation
-                        uint64_t lo[vl];
-                        uint64_t hi[vl];
-                        __riscv_vse64_v_u64m4(lo, vlo, vl);
-                        __riscv_vse64_v_u64m4(hi, vhi, vl);
-                        
-                        // Accumulate in scalar 128-bit - same pattern as your original
-                        for (size_t j = 0; j < vl; ++j) {
-                            size_t idx = j_batch + j;
-                            uint64_t prev_lo = acc_lo[idx];
-                            acc_lo[idx] += lo[j];
-                            if (acc_lo[idx] < prev_lo) {
-                                acc_hi[idx]++;
-                            }
-                            acc_hi[idx] += hi[j];
-                        }
-                        j_batch += vl;
-                    }
-                }
-                barrett_reduce_128_batch(acc_lo, acc_hi, count, *mod, results_out);
-                
-                delete[] acc_lo;
-                delete[] acc_hi;
-            }
+            void vector_dot_product_mod_batch(const uint64_t** temps, const uint64_t* base_row,size_t count, size_t ibase_size, const Modulus* mod,uint64_t* results_out) {
+    
+              uint64_t* acc_lo = new uint64_t[count]();
+              uint64_t* acc_hi = new uint64_t[count]();
+              
+              for (size_t j_batch = 0; j_batch < count; ) {
+                  size_t vl = __riscv_vsetvl_e64m1(count - j_batch);
+                  
+                  // Vector accumulators
+                  vuint64m1_t vacc_lo = __riscv_vmv_v_x_u64m1(0, vl);
+                  vuint64m1_t vacc_hi = __riscv_vmv_v_x_u64m1(0, vl);
+                  
+                  for (size_t k = 0; k < ibase_size; k++) {
+                      vuint64m1_t vbase = __riscv_vmv_v_x_u64m1(base_row[k], vl);
+                      
+                      // Use dynamic allocation instead of VLA
+                      uint64_t* temp_vals = new uint64_t[vl];
+                      #pragma omp simd
+                      for (size_t j = 0; j < vl; j++) {
+                          temp_vals[j] = temps[j_batch + j][k];
+                      }
+                      vuint64m1_t vtemp = __riscv_vle64_v_u64m1(temp_vals, vl);
+                      delete[] temp_vals;
+                      
+                      // Multiply
+                      vuint64m1_t vlo = __riscv_vmul_vv_u64m1(vtemp, vbase, vl);
+                      vuint64m1_t vhi = __riscv_vmulhu_vv_u64m1(vtemp, vbase, vl);
+                      
+                      // Add with carry detection
+                      vuint64m1_t old_lo = vacc_lo;
+                      vacc_lo = __riscv_vadd_vv_u64m1(vacc_lo, vlo, vl);
+                      
+                      // Correct carry detection and addition
+                      vbool64_t carry = __riscv_vmsltu_vv_u64m1_b64(vacc_lo, old_lo, vl);
+                      vacc_hi = __riscv_vadd_vv_u64m1(vacc_hi, vhi, vl);
+                      vacc_hi = __riscv_vadd_vx_u64m1_m(carry, vacc_hi, 1, vl);  // Fixed parameter order
+                  }
+                  
+                  // Store results
+                  __riscv_vse64_v_u64m1(&acc_lo[j_batch], vacc_lo, vl);
+                  __riscv_vse64_v_u64m1(&acc_hi[j_batch], vacc_hi, vl);
+                  
+                  j_batch += vl;
+              }
+              
+              barrett_reduce_128_batch(acc_lo, acc_hi, count, *mod, results_out);
+              delete[] acc_lo;
+              delete[] acc_hi;
+          }
 
         #endif
 
