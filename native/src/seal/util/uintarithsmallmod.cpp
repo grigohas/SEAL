@@ -167,10 +167,16 @@ namespace seal
                         size_t vl = __riscv_vsetvl_e64m4(count - j_batch);
                         
                         // Load temp values for this k across multiple j's
-                        uint64_t temp_vals[vl];
+                        /*uint64_t temp_vals[vl];
                         for (size_t j = 0; j < vl; j++) {
                             temp_vals[j] = temps[j_batch + j][k];   
-                        }
+                        }*/
+
+                        uint64_t* temp_vals = new uint64_t[vl];
+                        #pragma omp simd
+                        for (size_t j = 0; j < vl; j++) {
+                           temp_vals[j] = temps[j_batch + j][k];
+                         }
                         
                         vuint64m4_t vtemp = __riscv_vle64_v_u64m4(temp_vals, vl);
                         vuint64m4_t vbase = __riscv_vmv_v_x_u64m4(base_val, vl);
