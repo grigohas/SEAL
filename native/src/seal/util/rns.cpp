@@ -471,10 +471,18 @@ namespace seal
                   const uint64_t* base_row = base_change_matrix_[i].get();
                   const Modulus& mod = obase_.base()[i];
                   // Prepare array of temp pointers
-                  const uint64_t* temp_ptrs[count];
+                 /* const uint64_t* temp_ptrs[count];
+                  for (size_t j = 0; j < count; j++) {
+                      temp_ptrs[j] = temp[j];
+                  }*/
+                  const uint64_t** temp_ptrs = (const uint64_t**)malloc(count * sizeof(uint64_t*));
+
+                  // Tell compiler it's safe to vectorize
+                  #pragma omp simd
                   for (size_t j = 0; j < count; j++) {
                       temp_ptrs[j] = temp[j];
                   }
+                  
                   // BEST: Write directly to out[i] - no extra allocation needed
                   vector_dot_product_mod_batch(temp_ptrs, base_row, count, ibase_size, &mod, out[i]);
               }
