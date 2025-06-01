@@ -172,7 +172,7 @@ namespace seal
                             temp_vals[j] = temps[j_batch + j][k];   
                         }*/
 
-                        uint64_t* temp_vals = new uint64_t[vl];
+                        uint64_t temp_vals[vl];
                         #pragma omp simd
                         for (size_t j = 0; j < vl; j++) {
                            temp_vals[j] = temps[j_batch + j][k];
