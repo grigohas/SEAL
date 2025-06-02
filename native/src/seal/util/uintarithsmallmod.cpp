@@ -158,7 +158,7 @@ namespace seal
               
               size_t i = 0;
               while (i < count) {
-                  size_t vl = __riscv_vsetvl_e64m4(count - j_batch);
+                  size_t vl = __riscv_vsetvl_e64m4(count - i);
                   
                   // Vector accumulators
                   vuint64m4_t vacc_lo = __riscv_vmv_v_x_u64m4(0, vl);
@@ -171,7 +171,7 @@ namespace seal
                       uint64_t* temp_vals = new uint64_t[vl];
                       
                       for (size_t j = 0; j < vl; j++) {
-                          temp_vals[j] = temps[j_batch + j][k];
+                          temp_vals[j] = temps[i + j][k];
                       }
                       vuint64m4_t vtemp = __riscv_vle64_v_u64m4(temp_vals, vl);
                       delete[] temp_vals;
@@ -191,8 +191,8 @@ namespace seal
                   }
                   
                   // Store results
-                  __riscv_vse64_v_u64m4(&acc_lo[j_batch], vacc_lo, vl);
-                  __riscv_vse64_v_u64m4(&acc_hi[j_batch], vacc_hi, vl);
+                  __riscv_vse64_v_u64m4(&acc_lo[i], vacc_lo, vl);
+                  __riscv_vse64_v_u64m4(&acc_hi[i], vacc_hi, vl);
                   
                   i += vl;
               }
