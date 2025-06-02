@@ -200,7 +200,7 @@ namespace seal
               delete[] acc_lo;
               delete[] acc_hi;
           }
-          /*void vector_dot_product_mod_batch(const uint64_t** temps,const uint64_t* base_row,size_t count,size_t ibase_size,const Modulus* mod,uint64_t* results_out) 
+          /* void vector_dot_product_mod_batch(const uint64_t** temps,const uint64_t* base_row,size_t count,size_t ibase_size,const Modulus* mod,uint64_t* results_out) 
             {
                 
                 // Initialize scalar accumulators for each j
@@ -253,15 +253,15 @@ namespace seal
                 
                 barrett_reduce_128_batch(acc_lo, acc_hi, count, *mod, results_out);
                 
-               /* // Final reduction for all j's
+                // Final reduction for all j's
                 for (size_t j = 0; j < count; j++) {
                     unsigned long long acc[2] = {acc_lo[j], acc_hi[j]};
                     results_out[j] = barrett_reduce_128(acc, *mod);
                 }
-                */
+                
                 delete[] acc_lo;
                 delete[] acc_hi;
-            }*/
+            } */
 
 
         #endif
