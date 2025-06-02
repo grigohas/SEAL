@@ -484,7 +484,7 @@ namespace seal
                 multiply_poly_scalar_coeffmod(poly[i],poly_modulus_degree,scalar,modulus[i],result[i]);
             }
             auto stop6 = high_resolution_clock::now();
-   	        auto duration6 = duration_cast<microseconds>(stop6 - start6);
+   	auto duration6 = duration_cast<microseconds>(stop6 - start6);
             l+=duration6.count();
         }
 
