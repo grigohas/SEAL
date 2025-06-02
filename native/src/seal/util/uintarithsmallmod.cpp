@@ -156,7 +156,8 @@ namespace seal
               uint64_t* acc_lo = new uint64_t[count]();
               uint64_t* acc_hi = new uint64_t[count]();
               
-              for (size_t j_batch = 0; j_batch < count; ) {
+              size_t i = 0;
+              while (i < count) {
                   size_t vl = __riscv_vsetvl_e64m4(count - j_batch);
                   
                   // Vector accumulators
@@ -193,7 +194,7 @@ namespace seal
                   __riscv_vse64_v_u64m4(&acc_lo[j_batch], vacc_lo, vl);
                   __riscv_vse64_v_u64m4(&acc_hi[j_batch], vacc_hi, vl);
                   
-                  j_batch += vl;
+                  i += vl;
               }
               
               barrett_reduce_128_batch(acc_lo, acc_hi, count, *mod, results_out);
