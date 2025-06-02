@@ -214,7 +214,8 @@ namespace seal
                   uint64_t modulus_val = modulus.value();
                   
                   // Process in vector batches
-                  for (size_t i = 0; i < count; ) {
+                  size_t i = 0;
+                  while (i < count) {
                       size_t vl = __riscv_vsetvl_e64m4(count - i);
                       // Load inputs
                       vuint64m4_t vinput_lo = __riscv_vle64_v_u64m4(&input_lo[i], vl);
