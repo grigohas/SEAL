@@ -200,7 +200,7 @@ namespace seal
               delete[] acc_lo;
               delete[] acc_hi;
           }*/
-          void vector_dot_product_mod_batch(const uint64_t** temps,const uint64_t* base_row,size_t count,size_t ibase_size,const Modulus* mod,uint64_t* results_out)           Add commentMore actions
+          void vector_dot_product_mod_batch(const uint64_t** temps,const uint64_t* base_row,size_t count,size_t ibase_size,const Modulus* mod,uint64_t* results_out) 
             {
                 
                 // Initialize scalar accumulators for each j
