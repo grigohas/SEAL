@@ -167,7 +167,7 @@ namespace seal
                       vuint64m1_t vbase = __riscv_vmv_v_x_u64m1(base_row[k], vl);
                       
                       // Use dynamic allocation instead of VLA
-                      uint64_t* temp_vals = new uint64_t[vl];
+                      uint64_t temp_vals[vl];
                       
                       for (size_t j = 0; j < vl; j++) {
                           temp_vals[j] = temps[j_batch + j][k];
