@@ -273,9 +273,6 @@ namespace seal
             static_assert(SEAL_MULTIPLY_ACCUMULATE_MOD_MAX >= 16, "SEAL_MULTIPLY_ACCUMULATE_MOD_MAX");
             unsigned long long accumulator[2]{ 0, 0 };
             
-            /*#if defined(__riscv_v_intrinsic) 
-              vector_mult_accumulate_u64_to_u128(operand1,operand2,count,(long long*)accumulator);
-            #else*/
             switch (count)
             {
             case 0:
