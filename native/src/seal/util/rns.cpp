@@ -457,13 +457,6 @@ namespace seal
                         });
                     }
                 });
-
-           /* SEAL_ITERATE(iter(out, base_change_matrix_, obase_.base()), obase_size, [&](auto I) {
-                SEAL_ITERATE(iter(get<0>(I), temp), count, [&](auto J) {
-                    // Compute the base conversion sum modulo obase element
-                    get<0>(J) = dot_product_mod(get<1>(J), get<1>(I).get(), ibase_size, get<2>(I));
-                });
-            });*/
             auto start5 = high_resolution_clock::now();
             
             #if defined(__riscv_v_intrinsic)
@@ -474,27 +467,21 @@ namespace seal
                   const uint64_t* temp_ptrs[count];
                   for (size_t j = 0; j < count; j++) {
                       temp_ptrs[j] = temp[j];
-                  }
-                 /* const uint64_t** temp_ptrs = (const uint64_t**)malloc(count * sizeof(uint64_t*));
 
-                  // Tell compiler it's safe to vectorize  
-                  for (size_t j = 0; j < count; j++) {
-                      temp_ptrs[j] = temp[j];
-                  }*/
-                  
                   // BEST: Write directly to out[i] - no extra allocation needed
                   vector_dot_product_mod_batch(temp_ptrs, base_row, count, ibase_size, &mod, out[i]);
               }
-              #else
-                for (size_t i = 0; i < obase_size; i++) {
-                  for (size_t j = 0; j < count; j++) {                  
-                      out[i][j] = dot_product_mod(temp[j], base_change_matrix_[i].get(), ibase_size, obase_.base()[i]);
-                  }
-                }
-              #endif  
-              auto stop5 = high_resolution_clock::now();
-   	          auto duration5 = duration_cast<microseconds>(stop5 - start5);
-              f+=duration5.count();
+            #else
+            SEAL_ITERATE(iter(out, base_change_matrix_, obase_.base()), obase_size, [&](auto I) {
+            SEAL_ITERATE(iter(get<0>(I), temp), count, [&](auto J) {
+                // Compute the base conversion sum modulo obase element
+                 get<0>(J) = dot_product_mod(get<1>(J), get<1>(I).get(), ibase_size, get<2>(I));
+                });
+            });
+            #endif  
+            auto stop5 = high_resolution_clock::now();
+   	        auto duration5 = duration_cast<microseconds>(stop5 - start5);
+            f+=duration5.count();
         }
         
 
