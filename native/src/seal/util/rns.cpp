@@ -467,10 +467,11 @@ namespace seal
                   const uint64_t* temp_ptrs[count];
                   for (size_t j = 0; j < count; j++) {
                       temp_ptrs[j] = temp[j];
+                  }
 
                   // BEST: Write directly to out[i] - no extra allocation needed
                   vector_dot_product_mod_batch(temp_ptrs, base_row, count, ibase_size, &mod, out[i]);
-              }
+            }
             #else
             SEAL_ITERATE(iter(out, base_change_matrix_, obase_.base()), obase_size, [&](auto I) {
             SEAL_ITERATE(iter(get<0>(I), temp), count, [&](auto J) {
