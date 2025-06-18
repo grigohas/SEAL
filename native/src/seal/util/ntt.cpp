@@ -428,9 +428,7 @@ namespace seal
             #if defined(__riscv_v_intrinsic)
             
             // Unified function with buffer reuse - single optimization
-            auto compute_powers_vectorized = [&](uint64_t initial_power, 
-                                                 MultiplyUIntModOperand* target_array, 
-                                                 bool is_inverse) -> void {
+            auto compute_powers_vectorized = [&](uint64_t initial_power, MultiplyUIntModOperand* target_array, bool is_inverse) -> void {
                 
                 // Thread-local buffers - reused across calls to avoid repeated allocation
                 static thread_local std::vector<uint64_t> num_buffer;
