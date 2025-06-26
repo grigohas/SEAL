@@ -94,7 +94,7 @@ message(STATUS "SEAL_USE_CXX17: ${SEAL_USE_CXX17}")
 
 # Enable features from C++17 if available, disable features if set to OFF.
 include(EnableCXX17)
-include(EnableCXXCompilerFlags)
+
 
 # Enable security-related compile options (MSVC only)
 set(SEAL_SECURE_COMPILE_OPTIONS_OPTIONS_STR "Enable Control Flow Guard and Spectre mitigations (MSVC only)")
