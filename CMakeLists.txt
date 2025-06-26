@@ -25,27 +25,46 @@ message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
 project(SEAL VERSION 4.1.2 LANGUAGES CXX C)
 
-# RISC-V Architecture Detection
-# RISC-V Architecture Detection
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_CXX_COMPILER_TARGET MATCHES "riscv")
     message(STATUS "=========================================")
     message(STATUS "  RISC-V Architecture Detected")
     message(STATUS "=========================================")
     
-    # Βασικά flags για RISC-V
+    # Βασικά flags για RISC-V (χωρίς vector extensions)
     set(RISCV_BASE_FLAGS "-march=rv64gc -mabi=lp64d")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RISCV_BASE_FLAGS}")
     message(STATUS "Enabled base RISC-V flags: ${RISCV_BASE_FLAGS}")
 
-    # Έλεγχος για Vector Extensions (V)
-    include(CheckCXXCompilerFlag)
-    check_cxx_compiler_flag("-march=rv64gcv" RISCV_VECTOR_SUPPORT)
+    # Έλεγχος για Vector Extensions (V) - ΜΟΝΟ αν ζητηθεί ρητά
+    option(SEAL_ENABLE_RISCV_VECTOR "Enable RISC-V Vector extensions if available" OFF)
     
-    if(RISCV_VECTOR_SUPPORT)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gcv")
-        message(STATUS "Enabled RISC-V Vector extensions (V)")
+    if(SEAL_ENABLE_RISCV_VECTOR)
+        include(CheckCXXCompilerFlag)
+        
+        # Πρώτα έλεγχος για ύπαρξη header
+        set(CMAKE_REQUIRED_FLAGS "-march=rv64gc")
+        check_cxx_source_compiles("
+            #include <riscv_vector.h>
+            int main() {
+                vint32m1_t v = {0};
+                return 0;
+            }
+        " RISCV_VECTOR_HEADER_AVAILABLE)
+        
+        if(RISCV_VECTOR_HEADER_AVAILABLE)
+            check_cxx_compiler_flag("-march=rv64gcv" RISCV_VECTOR_SUPPORT)
+            
+            if(RISCV_VECTOR_SUPPORT)
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gcv")
+                message(STATUS "Successfully enabled RISC-V Vector extensions (V)")
+            else()
+                message(WARNING "RISC-V Vector extensions requested but not supported by compiler")
+            endif()
+        else()
+            message(WARNING "RISC-V Vector headers not found - cannot enable vector extensions")
+        endif()
     else()
-        message(STATUS "RISC-V Vector extensions (V) not available")
+        message(STATUS "RISC-V Vector extensions disabled by default (use -DSEAL_ENABLE_RISCV_VECTOR=ON to enable)")
     endif()
 
     # Απενεργοποίηση μη υποστηριζόμενων intrinsics
@@ -53,15 +72,48 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_CXX_COMPILER_TARGET MATCHES "
     set(SEAL_USE___INT128 OFF CACHE BOOL "Disable __int128 on RISC-V" FORCE)
     message(STATUS "Disabled unsupported intrinsics for RISC-V")
     
-    # Προσαρμογή για RISC-V specific optimizations
+    # Προσαρμογή βελτιστοποιήσεων
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(OPTIMIZATION_FLAGS "-O3 -fomit-frame-pointer")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPTIMIZATION_FLAGS}")
-        message(STATUS "Enabled optimization flags: ${OPTIMIZATION_FLAGS}")
+        
+        # Έλεγχος υποστήριξης κάθε flag ξεχωριστά
+        include(CheckCXXCompilerFlag)
+        set(FINAL_OPT_FLAGS)
+        foreach(flag IN ITEMS ${OPTIMIZATION_FLAGS})
+            check_cxx_compiler_flag("${flag}" SUPPORTS_FLAG)
+            if(SUPPORTS_FLAG)
+                set(FINAL_OPT_FLAGS "${FINAL_OPT_FLAGS} ${flag}")
+                message(STATUS "Enabled optimization flag: ${flag}")
+            else()
+                message(STATUS "Optimization flag not supported: ${flag}")
+            endif()
+        endforeach()
+        
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FINAL_OPT_FLAGS}")
     endif()
 
+    # Έλεγχος για Link-Time Optimization
+    if(SEAL_ENABLE_LTO)
+        include(CheckCXXCompilerFlag)
+        check_cxx_compiler_flag("-flto" SUPPORTS_LTO)
+        if(SUPPORTS_LTO)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
+            message(STATUS "Enabled Link-Time Optimization (LTO)")
+        else()
+            message(WARNING "LTO requested but not supported by compiler")
+        endif()
+    endif()
+
+    # Τελική έκδοση flags
     message(STATUS "Final CXX flags for RISC-V: ${CMAKE_CXX_FLAGS}")
     message(STATUS "=========================================")
+
+    # Προσαρμογή για SEAL συγκεκριμένες ρυθμίσεις
+    set(SEAL_AVOID_BRANCHING ON CACHE BOOL "Force branch-free code on RISC-V" FORCE)
+    set(SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT OFF CACHE BOOL "Disable exceptions on RISC-V" FORCE)
+    message(STATUS "Adjusted SEAL configuration for RISC-V:")
+    message(STATUS "  SEAL_AVOID_BRANCHING=ON")
+    message(STATUS "  SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT=OFF")
 endif()
 
 ########################
