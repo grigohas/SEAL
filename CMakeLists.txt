@@ -31,6 +31,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_CXX_COMPILER_TARGET MATCHES "
     # Βασικά flags για RISC-V
     set(RISCV_BASE_FLAGS "-march=rv64gc -mabi=lp64d")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RISCV_BASE_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
     # Έλεγχος για Vector Extensions (V)
     include(CheckCXXCompilerFlag)
