@@ -25,33 +25,44 @@ message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
 project(SEAL VERSION 4.1.2 LANGUAGES CXX C)
 
+# RISC-V Architecture Detection
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_CXX_COMPILER_TARGET MATCHES "riscv")
-    message(STATUS "Detected RISC-V architecture. Applying custom optimizations...")
-
+    message(STATUS "=========================================")
+    message(STATUS "  RISC-V Architecture Detected")
+    message(STATUS "=========================================")
+    
     # Βασικά flags για RISC-V
     set(RISCV_BASE_FLAGS "-march=rv64gc -mabi=lp64d")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RISCV_BASE_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    message(STATUS "Enabled base RISC-V flags: ${RISCV_BASE_FLAGS}")
+    message(STATUS "Enabled base RISC-V flags: -O3")
 
     # Έλεγχος για Vector Extensions (V)
     include(CheckCXXCompilerFlag)
     check_cxx_compiler_flag("-march=rv64gcv" RISCV_VECTOR_SUPPORT)
     
     if(RISCV_VECTOR_SUPPORT)
-        message(STATUS "RISC-V Vector extensions (V) supported - enabling")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gcv")
+        message(STATUS "Enabled RISC-V Vector extensions (V)")
     else()
-        message(STATUS "RISC-V Vector extensions (V) not supported")
+        message(STATUS "RISC-V Vector extensions (V) not available")
     endif()
 
     # Απενεργοποίηση μη υποστηριζόμενων intrinsics
     set(SEAL_USE_INTRIN OFF CACHE BOOL "Disable unsupported intrinsics on RISC-V" FORCE)
     set(SEAL_USE___INT128 OFF CACHE BOOL "Disable __int128 on RISC-V" FORCE)
+    message(STATUS "Disabled unsupported intrinsics for RISC-V")
     
     # Προσαρμογή για RISC-V specific optimizations
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fomit-frame-pointer")
+        set(OPTIMIZATION_FLAGS "-O3 -fomit-frame-pointer")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPTIMIZATION_FLAGS}")
+        message(STATUS "Enabled optimization flags: ${OPTIMIZATION_FLAGS}")
     endif()
+
+    message(STATUS "Final CXX flags for RISC-V: ${CMAKE_CXX_FLAGS}")
+    message(STATUS "=========================================")
 endif()
 
 ########################
