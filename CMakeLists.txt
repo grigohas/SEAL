@@ -25,6 +25,34 @@ message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
 project(SEAL VERSION 4.1.2 LANGUAGES CXX C)
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_CXX_COMPILER_TARGET MATCHES "riscv")
+    message(STATUS "Detected RISC-V architecture. Applying custom optimizations...")
+
+    # Βασικά flags για RISC-V
+    set(RISCV_BASE_FLAGS "-march=rv64gc -mabi=lp64d")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RISCV_BASE_FLAGS}")
+
+    # Έλεγχος για Vector Extensions (V)
+    include(CheckCXXCompilerFlag)
+    check_cxx_compiler_flag("-march=rv64gcv" RISCV_VECTOR_SUPPORT)
+    
+    if(RISCV_VECTOR_SUPPORT)
+        message(STATUS "RISC-V Vector extensions (V) supported - enabling")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gcv")
+    else()
+        message(STATUS "RISC-V Vector extensions (V) not supported")
+    endif()
+
+    # Απενεργοποίηση μη υποστηριζόμενων intrinsics
+    set(SEAL_USE_INTRIN OFF CACHE BOOL "Disable unsupported intrinsics on RISC-V" FORCE)
+    set(SEAL_USE___INT128 OFF CACHE BOOL "Disable __int128 on RISC-V" FORCE)
+    
+    # Προσαρμογή για RISC-V specific optimizations
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fomit-frame-pointer")
+    endif()
+endif()
+
 ########################
 # Global configuration #
 ########################
