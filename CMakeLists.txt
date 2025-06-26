@@ -26,6 +26,7 @@ message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 project(SEAL VERSION 4.1.2 LANGUAGES CXX C)
 
 # RISC-V Architecture Detection
+# RISC-V Architecture Detection
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_CXX_COMPILER_TARGET MATCHES "riscv")
     message(STATUS "=========================================")
     message(STATUS "  RISC-V Architecture Detected")
@@ -34,9 +35,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_CXX_COMPILER_TARGET MATCHES "
     # Βασικά flags για RISC-V
     set(RISCV_BASE_FLAGS "-march=rv64gc -mabi=lp64d")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RISCV_BASE_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
     message(STATUS "Enabled base RISC-V flags: ${RISCV_BASE_FLAGS}")
-    message(STATUS "Enabled base RISC-V flags: -O3")
 
     # Έλεγχος για Vector Extensions (V)
     include(CheckCXXCompilerFlag)
