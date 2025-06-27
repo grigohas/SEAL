@@ -25,25 +25,27 @@ message(STATUS "Build type (CMAKE_BUILD_TYPE): ${CMAKE_BUILD_TYPE}")
 
 project(SEAL VERSION 4.1.2 LANGUAGES CXX C)
 
+# Ορισμός του RISCVRVV ως επιλογή
+option(RISCVRVV "Enable RISC-V RVV extension support" OFF)
+
 # Έλεγχος αν το σύστημα είναι RISC-V
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv")
     message(STATUS "Detected RISC-V architecture. Adding custom flags...")
 
-    # Αν το flag -RISCVRVV=1 έχει οριστεί, προσθέτουμε τα flags για RISC-V Vector Extensions (rv64gcv)
-    if(DEFINED RISCVRVV AND RISCVRVV EQUAL 1)
+    # Αν το RISCVRVV είναι ενεργοποιημένο (RISCVRVV=ON)
+    if(RISCVRVV)
         message(STATUS "RISC-V RVV flag detected. Adding rv64gcv flags.")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gcv -mabi=lp64d")
     else()
-        # Αν δεν έχει οριστεί το flag, προσθέτουμε τα flags για RISC-V χωρίς vector extensions (rv64gc)
+        # Αν το RISCVRVV δεν είναι ενεργοποιημένο
         message(STATUS "RISC-V RVV flag not detected. Adding rv64gc flags.")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gc -mabi=lp64d")
     endif()
 endif()
 
-# Πάντα προσθήκη των καλύτερων flags για optimization (O3)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
-# Προσθήκη επιπλέον flags για βελτιστοποίηση
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -funroll-loops -fivopts -ffast-math")
 
 # Εμφάνιση των τελικών flags που προστέθηκαν
