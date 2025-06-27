@@ -46,7 +46,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -funroll-loops -fivopts -ffast-math")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -fivopts -ffast-math")
 
 # Εμφάνιση των τελικών flags που προστέθηκαν
 message(STATUS "Final CMake CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
