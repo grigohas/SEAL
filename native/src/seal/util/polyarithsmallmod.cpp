@@ -23,7 +23,7 @@ namespace seal
     {
         #if defined(__riscv_v_intrinsic)
         
-             inline vuint64m4_t barrett_reduce_rvv_scalar(vuint64m4_t op1, vuint64m4_t op2,uint64_t const_ratio_0, uint64_t const_ratio_1, uint64_t modulus_value,size_t vl) {
+             inline vuint64m4_t dyadic_product_coeffmod_rvv(vuint64m4_t op1, vuint64m4_t op2,uint64_t const_ratio_0, uint64_t const_ratio_1, uint64_t modulus_value,size_t vl) {
                 
                 // Step 1: 128-bit multiplication op1 * op2
                 vuint64m4_t z_low = __riscv_vmul_vv_u64m4(op1, op2, vl);
@@ -340,7 +340,7 @@ namespace seal
                 vuint64m4_t vop2 = __riscv_vle64_v_u64m4(operand2 + processed, vl);
                 
                 // Use scalar constants - NO vector creation needed!
-                vuint64m4_t vres = barrett_reduce_rvv_scalar(vop1, vop2,const_ratio_0, const_ratio_1, modulus_value, vl);
+                vuint64m4_t vres = dyadic_product_coeffmod_rvv(vop1, vop2,const_ratio_0, const_ratio_1, modulus_value, vl);
                 
                 __riscv_vse64_v_u64m4(result + processed, vres, vl);
                 processed += vl;
