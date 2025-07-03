@@ -55,7 +55,7 @@ void example_bfv_basics()
     In this example we use a relatively small polynomial modulus. Anything
     smaller than this will enable only very restricted encrypted computations.
     */
-    size_t poly_modulus_degree = 2048;
+    size_t poly_modulus_degree = 16384;
     parms.set_poly_modulus_degree(poly_modulus_degree);
 
     /*
